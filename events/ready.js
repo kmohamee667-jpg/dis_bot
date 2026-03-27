@@ -1,0 +1,31 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const { Collection } = require('discord.js');
+
+module.exports = {
+    name: 'clientReady',
+    once: true,
+    execute(client) {
+        console.log(`🟢 Logged in as ${client.user.tag}! Ready on ${client.guilds.cache.size} servers.`);
+        
+        // Load commands
+        client.commands = new Collection();
+        const commandsPath = path.join(__dirname, '../commands');
+        const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+        for (const file of commandFiles) {
+            const filePath = path.join(commandsPath, file);
+            const command = require(filePath);
+            // This command has a data property and an execute method.
+            if ('data' in command && 'execute' in command) {
+                client.commands.set(command.data.name, command);
+                console.log(`📱 Loaded command: ${command.data.name}`);
+            } else {
+                console.warn(`⚠️ Skipping invalid command: ${filePath}`);
+            }
+        }
+
+        console.log(`✅ Commands loaded!`);
+    }
+};
+
