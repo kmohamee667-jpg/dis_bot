@@ -22,10 +22,11 @@ rest.options.timeout = 60000; // Force timeout setting
     try {
         console.log(`Started refreshing ${commands.length} application (/) commands.`);
         
-        // This registers commands for a specific guild. 
-        // For global commands, use: Routes.applicationCommands('APPLICATION_ID')
+        const clientId = '1468926065853468672';
+        const guildId = '1476589188932440094';
+        
         await rest.put(
-            Routes.applicationGuildCommands('1468926065853468672', '1476589188932440094'),
+            Routes.applicationGuildCommands(clientId, guildId),
             { body: commands }
         );
         

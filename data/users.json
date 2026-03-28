@@ -1,14 +1,14 @@
 {
     "1447951012332699871": {
         "username": "khal3d0047",
-        "coins": 1000039,
+        "coins": 995039,
         "lastAdded": "2026-03-27T19:41:15.399Z",
         "dailyLastClaimed": "2026-03-27T19:41:15.415Z"
     },
     "956891840144101466": {
         "username": "_erllo__.",
-        "coins": 0,
-        "lastAdded": null,
+        "coins": 1000000,
+        "lastAdded": "2026-03-28T08:02:44.603Z",
         "dailyLastClaimed": null
     },
     "1463686469502894234": {
@@ -25,8 +25,8 @@
     },
     "1466515365663346864": {
         "username": "x99gg",
-        "coins": 6100,
-        "lastAdded": "2026-03-27T19:23:15.516Z",
+        "coins": 6200,
+        "lastAdded": "2026-03-28T08:02:15.828Z",
         "dailyLastClaimed": "2026-03-27T19:14:39.407Z"
     },
     "1441144616492601384": {
@@ -44,7 +44,7 @@
     "1470836367868301352": {
         "username": "myora11",
         "coins": 1500,
-        "lastAdded": "2026-03-27T18:35:47.801Z",
+        "lastAdded": "2026-03-28T09:31:38.344Z",
         "dailyLastClaimed": null
     },
     "1137527007027150848": {
@@ -58,5 +58,17 @@
         "coins": 27,
         "lastAdded": "2026-03-27T19:42:39.087Z",
         "dailyLastClaimed": "2026-03-27T19:42:39.089Z"
+    },
+    "1195813561352585239": {
+        "username": "ganaramadan_95963",
+        "coins": 75,
+        "lastAdded": "2026-03-28T04:09:15.438Z",
+        "dailyLastClaimed": "2026-03-28T04:09:15.655Z"
+    },
+    "1327412006822744087": {
+        "username": "doma_55",
+        "coins": 200,
+        "lastAdded": "2026-03-28T06:09:51.332Z",
+        "dailyLastClaimed": null
     }
 }

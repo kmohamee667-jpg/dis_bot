@@ -3,6 +3,7 @@ const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const db = require('../utils/db');
 const path = require('path');
 const { ALLOWED_USERNAMES } = require('../utils/config');
+const { isAdmin } = require('../utils/admin-check');
 
 // Helper to format coins (e.g. 1K, 1.5K, 1M)
 function formatCoins(coins) {
@@ -34,15 +35,7 @@ module.exports = {
             
             // التحقق من الصلاحيات إذا كان يريد رؤية رصيد شخص آخر
             if (targetUser.id !== interaction.user.id) {
-                const adminRoles = ['ceo', 'owner', 'dev'];
-                const isWhitelisted = ALLOWED_USERNAMES.includes(interaction.user.username);
-
-                let hasAdminRole = false;
-                if (interaction.member && interaction.member.roles && interaction.member.roles.cache) {
-                    hasAdminRole = interaction.member.roles.cache.some(role => adminRoles.includes(role.name.toLowerCase()));
-                }
-
-                if (!isWhitelisted && !hasAdminRole) {
+                if (!isAdmin(interaction)) {
                     return await interaction.editReply({ 
                         content: '❌ غير مسموح لك برؤية رصيد الأعضاء الآخرين!', 
                         flags: [MessageFlags.Ephemeral] 

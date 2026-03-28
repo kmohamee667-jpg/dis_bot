@@ -4,6 +4,8 @@ const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const path = require('path');
 const { ALLOWED_USERNAMES } = require('../utils/config');
 
+const { isAdmin } = require('../utils/admin-check');
+
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('give')
@@ -22,15 +24,8 @@ module.exports = {
 		.addUserOption(option => option.setName('user5').setDescription('المستخدم الخامس')),
     async execute(interaction) {
         const { logAction } = require('../utils/logger');
-        const adminRoles = ['ceo', 'owner', 'dev'];
-        const isWhitelisted = ALLOWED_USERNAMES.includes(interaction.user.username);
-
-        let hasAdminRole = false;
-        if (interaction.member && interaction.member.roles && interaction.member.roles.cache) {
-            hasAdminRole = interaction.member.roles.cache.some(role => adminRoles.includes(role.name.toLowerCase()));
-        }
-
-        if (!isWhitelisted && !hasAdminRole) {
+        
+        if (!isAdmin(interaction)) {
             return await interaction.reply({ 
                 content: '❌ غير مسموح لك باستخدام هذا الأمر! (للمسؤولين فقط)', 
                 flags: [MessageFlags.Ephemeral] 
@@ -81,20 +76,6 @@ module.exports = {
 					user = db.updateUserCoins(userId, targetUser.username, newBalance, true);
 				}
 				results.push({ targetUser, oldBalance, newBalance: user.coins });
-
-				// تسجيل العملية في اللوج
-				await logAction(interaction.client, interaction.guildId, {
-					title: '💰 إيداع كوينات إداري',
-					color: '#F1C40F',
-					user: interaction.user,
-					fields: [
-						{ name: 'المسؤول', value: interaction.user.username, inline: true },
-						{ name: 'المستلم', value: targetUser.username, inline: true },
-						{ name: 'المبلغ', value: `\`${amount.toLocaleString()}\` كوين`, inline: true },
-						{ name: 'الرصيد القديم', value: `\`${oldBalance.toLocaleString()}\``, inline: true },
-						{ name: 'الرصيد الجديد', value: `\`${user.coins.toLocaleString()}\``, inline: true }
-					]
-				});
 			}
 
 			// إذا كان مستخدم واحد، نظهر الصورة التقليدية
@@ -137,9 +118,9 @@ module.exports = {
 				// 4. Balance Transition
 				const contentY = 360;
 				ctx.font = 'bold 45px sans-serif';
-				const oldText = oldBalance.toLocaleString(); const oldWidth = ctx.measureText(oldText).width;
+				const oldText = (oldBalance || 0).toLocaleString(); const oldWidth = ctx.measureText(oldText).width;
 				const arrowText = ' ➔ '; const arrowWidth = ctx.measureText(arrowText).width;
-				const newText = newBalance.toLocaleString(); const newWidth = ctx.measureText(newText).width;
+				const newText = (newBalance || 0).toLocaleString(); const newWidth = ctx.measureText(newText).width;
 				const totalWidth = oldWidth + arrowWidth + newWidth;
 				let currentX = centerX - totalWidth / 2;
 				ctx.fillStyle = '#ff6b6b'; ctx.textAlign = 'left'; ctx.fillText(oldText, currentX, contentY); currentX += oldWidth;
@@ -152,8 +133,8 @@ module.exports = {
 				await interaction.editReply({ files: [attachment] });
 			} else {
 				// عرض قائمة ملخصة لعدة مستخدمين
-				const userList = results.map(r => `• **${r.targetUser.username}**: \`${r.oldBalance.toLocaleString()}\` ➔ \`${r.newBalance.toLocaleString()}\``).join('\n');
-				await interaction.editReply({ content: `✅ تم إيداع **${amount.toLocaleString()}** كوين لـ **${targetUsers.length}** أعضاء بنجاح!\n\n${userList}` });
+				const userList = results.map(r => `• **${r.targetUser.username}**: \`${(r.oldBalance || 0).toLocaleString()}\` ➔ \`${(r.newBalance || 0).toLocaleString()}\``).join('\n');
+				await interaction.editReply({ content: `✅ تم إيداع **${(amount || 0).toLocaleString()}** كوين لـ **${targetUsers.length}** أعضاء بنجاح!\n\n${userList}` });
 			}
 
 		} catch (error) {

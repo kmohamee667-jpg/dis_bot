@@ -1,6 +1,6 @@
-const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const shopDb = require('../utils/shopDb');
-const { ALLOWED_USERNAMES } = require('../utils/config');
+const { isAdmin } = require('../utils/admin-check');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,32 +9,46 @@ module.exports = {
         .addRoleOption(option => 
             option.setName('role')
                 .setDescription('الرتبة المراد إضافتها')
+                .setRequired(true))
+        .addIntegerOption(option =>
+            option.setName('price')
+                .setDescription('سعر الرتبة بالكوينات')
                 .setRequired(true)),
     async execute(interaction) {
-        const adminRoles = ['ceo', 'owner', 'dev'];
-        const isWhitelisted = ALLOWED_USERNAMES.includes(interaction.user.username);
-        const hasAdminRole = interaction.member && interaction.member.roles && interaction.member.roles.cache.some(role => adminRoles.includes(role.name.toLowerCase()));
-
-        if (!isWhitelisted && !hasAdminRole) {
-            return await interaction.reply({ content: '❌ غير مسموح لك باستخدام هذا الأمر! (للمسؤولين فقط)', flags: [MessageFlags.Ephemeral] });
+        if (!isAdmin(interaction)) {
+            return await interaction.reply({ 
+                content: '❌ غير مسموح لك باستخدام هذا الأمر! (للمسؤولين فقط)', 
+                flags: [MessageFlags.Ephemeral] 
+            });
         }
 
         const role = interaction.options.getRole('role');
+        const price = interaction.options.getInteger('price');
 
-        const modal = new ModalBuilder()
-            .setCustomId(`add_role_modal_${role.id}`)
-            .setTitle(`إعداد سعر رتبة: ${role.name}`);
+        if (price < 0) {
+            return await interaction.reply({ 
+                content: '❌ يجب إدخال سعر صحيح (رقم موجب).', 
+                flags: [MessageFlags.Ephemeral] 
+            });
+        }
 
-        const priceInput = new TextInputBuilder()
-            .setCustomId('price')
-            .setLabel('أدخل سعر الرتبة بالكوينات')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('مثال: 5000')
-            .setRequired(true);
+        const success = shopDb.addRole(role.id, role.name, price);
 
-        const firstActionRow = new ActionRowBuilder().addComponents(priceInput);
-        modal.addComponents(firstActionRow);
+        if (!success) {
+            return await interaction.reply({ 
+                content: '⚠️ هذه الرتبة موجودة في المتجر بالفعل!', 
+                flags: [MessageFlags.Ephemeral] 
+            });
+        }
 
-        await interaction.showModal(modal);
+        // الرسالة المطلوبة من المستخدم
+        await interaction.reply({ 
+            content: `✅ الرول تم اضافه <@&${role.id}> للمتجر بنجاح بسعر **${(price || 0).toLocaleString()}** كوين.`,
+            flags: [MessageFlags.Ephemeral]
+        });
+
+        // التحديث التلقائي للشوب الثابت
+        const { updatePersistentShop } = require('../utils/shopUI');
+        await updatePersistentShop(interaction.client, interaction.guildId).catch(() => {});
     },
 };

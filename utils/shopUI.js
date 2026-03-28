@@ -27,11 +27,11 @@ async function renderShop(interaction, page, isPublic = false) {
         for (let i = 0; i < currentRoles.length; i++) {
             const roleData = currentRoles[i];
             const role = interaction.guild ? interaction.guild.roles.cache.get(roleData.id) : null;
-            const roleName = role ? role.name : roleData.name || 'Unknown';
+            const roleName = roleData.name || (role ? role.name : 'Unknown Role');
             
             embed.addFields({ 
                 name: `🔹 ${roleName}`, 
-                value: `╼ **السعر:** \`${roleData.price.toLocaleString()}\` كوين\n╼ **المنشن:** <@&${roleData.id}>`, 
+                value: `╼ **السعر:** \`${(roleData.price || 0).toLocaleString()}\` كوين\n╼ **المنشن:** <@&${roleData.id}>`, 
                 inline: true 
             });
 
@@ -116,14 +116,18 @@ async function updatePersistentShop(client, guildId) {
 
         const currentRoles = roles.slice(0, itemsPerPage);
         const rows = [];
-        if (currentRoles.length > 0) {
+        
+        if (currentRoles.length === 0) {
+            embed.setDescription('⚠️ **المتجر فارغ حالياً!**\nانتظر حتى يقوم المسؤولون بإضافة بعض الرتب قريباً.');
+            // No fields or buttons needed
+        } else {
             const buyButtonsRow = new ActionRowBuilder();
             for (let i = 0; i < currentRoles.length; i++) {
                 const roleData = currentRoles[i];
-                const roleName = roleData.name || 'Unknown';
+                const roleName = roleData.name || 'Unknown Role';
                 embed.addFields({ 
                     name: `🔹 ${roleName}`, 
-                    value: `╼ **السعر:** \`${roleData.price.toLocaleString()}\` كوين\n╼ **المنشن:** <@&${roleData.id}>`, 
+                    value: `╼ **السعر:** \`${(roleData.price || 0).toLocaleString()}\` كوين\n╼ **المنشن:** <@&${roleData.id}>`, 
                     inline: true 
                 });
 
@@ -134,14 +138,14 @@ async function updatePersistentShop(client, guildId) {
                 buyButtonsRow.addComponents(new ButtonBuilder().setCustomId(`buy_role_${roleData.id}`).setLabel(`${roleName}`).setStyle(ButtonStyle.Success).setEmoji('💎'));
             }
             rows.push(buyButtonsRow);
-        }
 
-        if (totalPages > 1) {
-            const navRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`shop_prev_0`).setLabel('⬅️ السابق').setStyle(ButtonStyle.Secondary).setDisabled(true),
-                new ButtonBuilder().setCustomId(`shop_next_0`).setLabel('التالي ➡️').setStyle(ButtonStyle.Secondary).setDisabled(false)
-            );
-            rows.push(navRow);
+            if (totalPages > 1) {
+                const navRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`shop_prev_0`).setLabel('⬅️ السابق').setStyle(ButtonStyle.Secondary).setDisabled(true),
+                    new ButtonBuilder().setCustomId(`shop_next_0`).setLabel('التالي ➡️').setStyle(ButtonStyle.Secondary).setDisabled(false)
+                );
+                rows.push(navRow);
+            }
         }
 
         await message.edit({ embeds: [embed], components: rows, files: [bgFile] });

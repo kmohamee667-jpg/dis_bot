@@ -38,19 +38,6 @@ module.exports = {
         db.updateUserCoins(userId, interaction.user.username, newBalance, true);
         db.setLastClaimed(userId);
 
-        // تسجيل العملية في اللوج
-        const { logAction } = require('../utils/logger');
-        await logAction(interaction.client, interaction.guildId, {
-            title: '🎁 استلام جائزة يومية',
-            color: '#2ECC71',
-            user: interaction.user,
-            fields: [
-                { name: 'المستخدم', value: `${interaction.user.username} (${interaction.user.id})`, inline: true },
-                { name: 'المبلغ', value: `\`${reward}\` كوين`, inline: true },
-                { name: 'الرصيد الجديد', value: `\`${newBalance}\` كوين`, inline: true }
-            ]
-        });
-
         await interaction.reply({ 
             content: `🎁 مبروك! لقد حصلت على **${reward}** كوين جائزة يومية.\nرصيدك الآن: **${newBalance}** كوين.`
         });

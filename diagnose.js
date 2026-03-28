@@ -13,7 +13,7 @@ client.once('ready', async () => {
         console.log(`- ${guild.name} (ID: ${guild.id})`);
     });
     
-    const targetGuildId = '1476589188932440094';
+    const targetGuildId = '1468928668733673485';
     const targetGuild = await client.guilds.fetch(targetGuildId).catch(() => null);
     
     if (targetGuild) {

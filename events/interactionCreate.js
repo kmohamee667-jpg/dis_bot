@@ -24,51 +24,37 @@ module.exports = {
 
         // --- 2. Modal Submissions ---
         else if (interaction.isModalSubmit()) {
-            if (interaction.customId.startsWith('add_role_modal_')) {
-                const roleId = interaction.customId.replace('add_role_modal_', '');
-                const price = parseInt(interaction.fields.getTextInputValue('price'));
-
-                if (isNaN(price) || price < 0) {
-                    return await interaction.reply({ content: '❌ يجب إدخال سعر صحيح (رقم موجب).', flags: [MessageFlags.Ephemeral] });
-                }
-
-                let guild = interaction.guild;
-                if (!guild && interaction.guildId) {
-                    guild = await interaction.client.guilds.fetch(interaction.guildId).catch(() => null);
-                }
-
-                // السماح بالإضافة حتى لو لم يتم العثور على السيرفر أو الرتبة (بناءً على طلب المستخدم)
-                const role = guild ? guild.roles.cache.get(roleId) : null;
-                const roleName = role ? role.name : 'Unknown Role';
-
-                const shopDb = require('../utils/shopDb');
-                const { updatePersistentShop } = require('../utils/shopUI');
-                const success = shopDb.addRole(roleId, roleName, price);
-
-                if (!success) {
-                    return await interaction.reply({ content: '⚠️ هذه الرتبة موجودة في المتجر بالفعل!', flags: [MessageFlags.Ephemeral] });
-                }
-
-                await updatePersistentShop(interaction.client, targetGuildId).catch(() => {});
-
-                // تسجيل الإضافة في اللوج
-                const { logAction } = require('../utils/logger');
-                await logAction(interaction.client, interaction.guildId, {
-                    title: '➕ إضافة رتبة للمتجر',
-                    color: '#3498DB',
-                    user: interaction.user,
-                    fields: [
-                        { name: 'المسؤول', value: interaction.user.username, inline: true },
-                        { name: 'الرتبة', value: roleName, inline: true },
-                        { name: 'ID الرتبة', value: roleId, inline: true },
-                        { name: 'السعر', value: `\`${price.toLocaleString()}\` كوين`, inline: true }
-                    ]
-                });
-            }
+            // --- 🚩 Automatic Modal Logging ---
+            const { logAction } = require('../utils/logger');
+            const modalFields = interaction.fields.fields.map(f => `• **${f.customId}:** \`${f.value}\``).join('\n') || '*لا يوجد خيارات*';
+            
+            await logAction(interaction.client, interaction.guildId, {
+                title: '📝 إرسال نموذج (Modal)',
+                color: '#9B59B6',
+                user: interaction.user,
+                fields: [
+                    { name: 'ID النموذج', value: `\`${interaction.customId}\``, inline: true },
+                    { name: 'البيانات', value: modalFields, inline: false }
+                ]
+            });
+            // ---------------------------------
         }
 
         // --- 3. Button Interactions ---
         else if (interaction.isButton()) {
+            // --- 🚩 Automatic Button Logging ---
+            const { logAction } = require('../utils/logger');
+            await logAction(interaction.client, interaction.guildId, {
+                title: '🔘 ضغطة زرار (Button)',
+                color: '#E67E22',
+                user: interaction.user,
+                fields: [
+                    { name: 'الزرار (CustomID)', value: `\`${interaction.customId}\``, inline: true },
+                    { name: 'القناة', value: `<#${interaction.channelId}>`, inline: true }
+                ]
+            });
+            // -----------------------------------
+
             const shopDb = require('../utils/shopDb');
             const db = require('../utils/db');
             const { renderShop } = require('../utils/shopUI');
@@ -114,7 +100,7 @@ module.exports = {
 
                 const confirmEmbed = new EmbedBuilder()
                     .setTitle('❓ تأكيد عملية الشراء')
-                    .setDescription(`هل أنت متأكد من رغبتك في شراء رتبة <@&${roleId}> مقابل **${roleData.price.toLocaleString()}** كوين؟`)
+                    .setDescription(`هل أنت متأكد من رغبتك في شراء رتبة <@&${roleId}> مقابل **${(roleData.price || 0).toLocaleString()}** كوين؟`)
                     .setColor('#FFD700');
 
                 const row = new ActionRowBuilder().addComponents(
@@ -178,9 +164,9 @@ module.exports = {
                         color: '#4ee44e',
                         user: interaction.user,
                         fields: [
-                            { name: '👤 المشتري', value: `${interaction.user.username} (${interaction.user.id})`, inline: true },
-                            { name: '🎖️ الرتبة', value: role.name, inline: true },
-                            { name: '💰 السعر', value: `\`${roleData.price.toLocaleString()}\` كوين`, inline: true }
+                        { name: '👤 المشتري', value: `${interaction.user.username} (${interaction.user.id})`, inline: true },
+                        { name: '🎖️ الرتبة', value: role.name, inline: true },
+                        { name: '💰 السعر', value: `\`${(roleData.price || 0).toLocaleString()}\` كوين`, inline: true }
                         ]
                     });
                 } catch (err) {
