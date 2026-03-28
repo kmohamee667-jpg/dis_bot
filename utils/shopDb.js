@@ -60,9 +60,19 @@ function deleteRole(roleId) {
     return true;
 }
 
+function updateRolePrice(roleId, newPrice) {
+    const data = readShop();
+    const role = data.roles.find(r => r.id === roleId);
+    if (!role) return false;
+    
+    role.price = newPrice;
+    writeShop(data);
+    return true;
+}
+
 function getRole(roleId) {
     const data = readShop();
     return data.roles.find(r => r.id === roleId) || null;
 }
 
-module.exports = { getRoles, addRole, deleteRole, getRole, getMetadata, updateMetadata };
+module.exports = { getRoles, addRole, deleteRole, getRole, getMetadata, updateMetadata, updateRolePrice };

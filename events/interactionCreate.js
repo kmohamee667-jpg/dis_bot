@@ -10,6 +10,28 @@ module.exports = {
 
             try {
                 await command.execute(interaction);
+
+                // --- 🚩 Automatic Command Logging ---
+                const { logAction } = require('../utils/logger');
+                const options = interaction.options.data.map(opt => {
+                    let val = opt.value;
+                    if (opt.type === 6 && opt.user) val = `${opt.user.tag} (${opt.user.id})`; 
+                    if (opt.type === 8 && opt.role) val = `${opt.role.name} (${opt.role.id})`;
+                    if (opt.type === 7 && opt.channel) val = `${opt.channel.name} (${opt.channel.id})`;
+                    return `• **${opt.name}:** \`${val}\``;
+                }).join('\n') || '*لا يوجد خيارات*';
+
+                await logAction(interaction.client, interaction.guildId, {
+                    title: '🛰️ تنفيذ أمر سلاش (/)',
+                    color: '#2ECC71',
+                    user: interaction.user,
+                    fields: [
+                        { name: 'الأمر', value: `\`/${interaction.commandName}\``, inline: true },
+                        { name: 'القناة', value: `<#${interaction.channelId}>`, inline: true },
+                        { name: 'التفاصيل', value: options, inline: false }
+                    ]
+                });
+                // -----------------------------------
             } catch (error) {
                 if (error.code === 10062 || error.code === 40060) return;
                 console.error('Interaction error:', error);
@@ -34,7 +56,8 @@ module.exports = {
                 user: interaction.user,
                 fields: [
                     { name: 'ID النموذج', value: `\`${interaction.customId}\``, inline: true },
-                    { name: 'البيانات', value: modalFields, inline: false }
+                    { name: 'القناة', value: `<#${interaction.channelId}>`, inline: true },
+                    { name: 'البيانات المرسلة', value: modalFields, inline: false }
                 ]
             });
             // ---------------------------------
@@ -46,7 +69,7 @@ module.exports = {
             const { logAction } = require('../utils/logger');
             await logAction(interaction.client, interaction.guildId, {
                 title: '🔘 ضغطة زرار (Button)',
-                color: '#E67E22',
+                color: '#3498DB',
                 user: interaction.user,
                 fields: [
                     { name: 'الزرار (CustomID)', value: `\`${interaction.customId}\``, inline: true },

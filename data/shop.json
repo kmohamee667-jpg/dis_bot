@@ -1,17 +1,17 @@
 {
     "metadata": {
-        "shopMessageId": "1487382571326111874",
+        "shopMessageId": "1487396224729350204",
         "shopChannelId": "1486834671114391623"
     },
     "roles": [
         {
             "id": "1486086853760385105",
             "name": "Special",
-            "price": 5000
+            "price": 999
         },
         {
             "id": "1485655235551563867",
-            "name": "links",
+            "name": "links + photos",
             "price": 500
         }
     ]

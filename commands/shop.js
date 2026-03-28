@@ -84,19 +84,12 @@ module.exports = {
 
         // Default: View (can be used by anyone if needed, but per original code we might want isAdmin check if user wanted it)
         // Let's keep the isAdmin check for view too as per previous code version if requested
-        if (!isAdmin(interaction)) {
-             return await interaction.reply({ 
-                 content: '❌ غير مسموح لك باستخدام هذا الأمر! (للمسؤولين فقط)', 
-                 flags: [MessageFlags.Ephemeral] 
-             });
-        }
-
         const roles = shopDb.getRoles();
         if (roles.length === 0) {
             return await interaction.reply({ content: '⚠️ المتجر فارغ حالياً! انتظر حتى يضيف المسؤولون بعض الرتب.', flags: [MessageFlags.Ephemeral] });
         }
 
-        await interaction.deferReply();
-        await renderShop(interaction, 0, true);
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+        await renderShop(interaction, 0, false); // isPublic = false
     },
 };
