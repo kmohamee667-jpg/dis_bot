@@ -67,16 +67,16 @@ async function drawTimer(timerData, themeData = {}) {
     ctx.textAlign = 'left';
     ctx.fillText('👥 Active members', listX + 25, listY + 50);
 
-    // Display Members (2-Column Grid - SORTED)
+    // Display Members (3-Column Grid - SORTED)
     const sortedParticipants = Object.entries(timerData.participants)
         .sort(([, timeA], [, timeB]) => timeB - timeA);
 
-    const colCount = 2;
-    const itemHeight = 42; // smaller to fit more members
+    const colCount = 3;
+    const itemHeight = 35; // smaller to fit more members
     const itemWidth = (listWidth - 40) / colCount;
-    const maxItems = 25; // show up to 25 members
+    const maxItems = 30; // show up to 30 members
 
-    ctx.font = 'bold 16px Cairo';
+    ctx.font = 'bold 13px Cairo';
     for (let i = 0; i < Math.min(sortedParticipants.length, maxItems); i++) {
         const [userId, totalSeconds] = sortedParticipants[i];
         const participantName = timerData.participantNames[userId] || `User ${userId.slice(0, 5)}`;
@@ -126,22 +126,22 @@ async function drawTimer(timerData, themeData = {}) {
             ctx.shadowBlur = 8;
             ctx.shadowColor = '#FFD700';
         }
-        roundRect(ctx, itemX + 5, itemY, itemWidth - 10, 50, 25, true, true);
+        roundRect(ctx, itemX + 5, itemY, itemWidth - 10, 40, 20, true, true);
         ctx.shadowBlur = 0;
 
         // Circular Avatar placeholder
         ctx.save();
         ctx.beginPath();
-        const avatarX = itemX + 30;
-        const avatarY = itemY + 25;
-        ctx.arc(avatarX, avatarY, 18, 0, Math.PI * 2);
+        const avatarX = itemX + 24;
+        const avatarY = itemY + 20;
+        ctx.arc(avatarX, avatarY, 14, 0, Math.PI * 2);
         ctx.clip();
         
         let avatarLoaded = false;
         if (avatarUrl) {
             try {
                 const avatarImg = await loadImage(avatarUrl);
-                ctx.drawImage(avatarImg, avatarX - 18, avatarY - 18, 36, 36);
+                ctx.drawImage(avatarImg, avatarX - 14, avatarY - 14, 28, 28);
                 avatarLoaded = true;
             } catch (e) {}
         }
@@ -154,31 +154,31 @@ async function drawTimer(timerData, themeData = {}) {
 
         // Rank Badge / Crown for #1
         if (i === 0 && totalSeconds > 0) {
-            ctx.font = '32px Cairo';
+            ctx.font = '24px Cairo';
             ctx.textAlign = 'center';
-            ctx.fillText('👑', itemX - 15, itemY + 35); // Next to the pill
+            ctx.fillText('👑', itemX - 12, itemY + 28); // Next to the pill
         }
 
         // Name
         const isTopOne = (i === 0 && totalSeconds > 0);
         ctx.fillStyle = isTopOne ? '#000000' : '#ffffff';
         ctx.textAlign = 'left';
-        ctx.font = 'bold 15px Cairo';
-        const truncatedName = participantName.length > 8 ? participantName.slice(0, 7) + '..' : participantName;
-        ctx.fillText(`${rankIcon} ${truncatedName}`, itemX + 55, itemY + 22);
+        ctx.font = 'bold 12px Cairo';
+        const truncatedName = participantName.length > 7 ? participantName.slice(0, 6) + '.' : participantName;
+        ctx.fillText(`${rankIcon} ${truncatedName}`, itemX + 48, itemY + 16);
 
         // Individual Timer
         const pMins = Math.floor(totalSeconds / 60);
         const pSecs = totalSeconds % 60;
         const pTimeStr = `${pMins}m ${pSecs}s`;
         ctx.fillStyle = isTopOne ? '#000000' : 'rgba(255, 255, 255, 0.8)';
-        ctx.font = 'italic 13px Cairo';
-        ctx.fillText(pTimeStr, itemX + 55, itemY + 40);
+        ctx.font = 'italic 10px Cairo';
+        ctx.fillText(pTimeStr, itemX + 48, itemY + 27);
 
         // Status indicator dot for non-top-3 (if active)
         if (isActive && i > 2) {
             ctx.beginPath();
-            ctx.arc(avatarX + 12, avatarY + 12, 5, 0, Math.PI * 2);
+            ctx.arc(avatarX + 10, avatarY + 10, 4, 0, Math.PI * 2);
             ctx.fillStyle = '#2ecc71';
             ctx.fill();
             ctx.stroke();
