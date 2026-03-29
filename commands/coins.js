@@ -1,5 +1,5 @@
-const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder, GlobalFonts } = require('discord.js');
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const db = require('../utils/db');
 const timerManager = require('../utils/timerManager');
 const path = require('path');
