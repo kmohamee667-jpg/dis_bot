@@ -97,6 +97,24 @@ module.exports = {
 
         // 3. Rendering & Loop
         let lastManualRefresh = 0;
+
+        // Delete all messages in the text channel except the timer message (if exists)
+        const purgeChatExceptTimer = async (timerMessageId) => {
+            try {
+                const messages = await interaction.channel.messages.fetch({ limit: 100 });
+                const toDelete = messages.filter(msg => msg.id !== timerMessageId);
+                if (toDelete.size > 0) {
+                    // bulkDelete only works for messages <14 days old
+                    const deletable = toDelete.filter(msg => Date.now() - msg.createdTimestamp < 14 * 24 * 60 * 60 * 1000);
+                    if (deletable.size > 0) {
+                        await interaction.channel.bulkDelete(deletable, true).catch(() => {});
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to purge chat except timer:', e);
+            }
+        };
+
         const renderAndSend = async () => {
             const currentTimer = timerManager.getTimer(voiceChannel.id);
             if (!currentTimer) return;
@@ -143,6 +161,9 @@ module.exports = {
                     const oldMsg = await interaction.channel.messages.fetch(currentTimer.messageId);
                     if (oldMsg) await oldMsg.delete().catch(() => {});
                 } catch (e) {}
+
+                // Purge other messages from channel (keep one timer message)
+                await purgeChatExceptTimer(currentTimer.messageId);
 
                 const newMsg = await interaction.channel.send({
                     embeds: [embed],
