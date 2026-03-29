@@ -73,7 +73,7 @@ class TimerManager {
 
     /**
      * Update participant times and award coins
-     * NOW WITH ACCURATE TIMING AND NO NEGATIVE VALUES - INDEPENDENT TIMER
+     * NOW WITH ULTRA-PRECISE TIMING AND NO NEGATIVE VALUES - NATURAL TIMER
      */
     tick(channelId, voiceChannel = null) {
         const timer = this.activeTimers.get(channelId);
@@ -82,11 +82,11 @@ class TimerManager {
         const now = Date.now();
         const delta = Math.floor((now - timer.lastUpdate) / 1000);
 
-        // Always update at least 1 second if more than 500ms have passed (for reliability)
-        const effectiveDelta = delta > 0 ? delta : (now - timer.lastUpdate >= 500 ? 1 : 0);
+        // Ultra-precise timing: Always update at least 1 second if more than 800ms have passed
+        const effectiveDelta = delta > 0 ? delta : (now - timer.lastUpdate >= 800 ? 1 : 0);
         if (effectiveDelta <= 0) return;
 
-        // Update time left - but never allow negative
+        // Update time left - but never allow negative (natural flow)
         timer.timeLeft -= effectiveDelta;
         if (timer.timeLeft < 0) {
             timer.timeLeft = 0;
