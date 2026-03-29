@@ -73,6 +73,7 @@ class TimerManager {
 
     /**
      * Update participant times and award coins
+     * NOW WITH ACCURATE TIMING AND NO NEGATIVE VALUES
      */
     tick(channelId, voiceChannel = null) {
         const timer = this.activeTimers.get(channelId);
@@ -83,12 +84,15 @@ class TimerManager {
         
         if (delta <= 0) return;
 
-        // Update time left
+        // Update time left - but never allow negative
         timer.timeLeft -= delta;
+        if (timer.timeLeft < 0) {
+            timer.timeLeft = 0;
+        }
         timer.lastUpdate = now;
 
         // --- 🪙 ECONOMY INTEGRATION: Award coins ---
-        if (timer.mode === 'study') {
+        if (timer.mode === 'study' && timer.timeLeft > 0) {
             timer.currentParticipants.forEach(userId => {
                 // 1. Update Participation Time (for image)
                 if (!timer.participants[userId]) timer.participants[userId] = 0;
@@ -102,6 +106,7 @@ class TimerManager {
                         guildMap[userId] += delta;
                     }
 
+                let rate = 1;
                 if (voiceChannel) {
                     const member = voiceChannel.members.get(userId);
                     if (member && member.voice) {

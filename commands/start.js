@@ -163,7 +163,8 @@ module.exports = {
 
         await renderAndSend();
 
-        // 4. Tick Interval (Main Loop)
+        // 4. Tick Interval (Main Loop) - Updates every 1 second, UI refresh every 15 seconds
+        let lastUIRefresh = Date.now();
         const intervalId = setInterval(async () => {
             const timer = timerManager.getTimer(voiceChannel.id);
             if (!timer) {
@@ -245,9 +246,11 @@ module.exports = {
                 }
             }
 
-            // Update UI: Every 15 seconds or at the very end
-            if (timer.timeLeft % 15 === 0 || timer.timeLeft < 5) {
+            // Update UI: Every 15 seconds reliably (not based on modulo)
+            const now = Date.now();
+            if (now - lastUIRefresh >= 15000 || timer.timeLeft < 5) {
                 await renderAndSend();
+                lastUIRefresh = now;
             }
         }, 1000);
 
