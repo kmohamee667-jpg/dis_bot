@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const db = require('../utils/db');
-const timerManager = require('../utils/timerManager');
 const path = require('path');
 
 // Register Cairo Fonts
@@ -70,9 +69,13 @@ module.exports = {
                 user = db.updateUserCoins(userId, username, user.coins);
             }
 
-            // Get study time from timerManager
-            const studySeconds = timerManager.getUserStudyTime(interaction.guildId, userId);
-            const studyFormatted = `${Math.floor(studySeconds / 60)}m ${studySeconds % 60}s`;
+            // Get total persistent study time from database
+            const studySeconds = db.getStudyTime(userId);
+            const studyHours = Math.floor(studySeconds / 3600);
+            const studyMins = Math.floor((studySeconds % 3600) / 60);
+            const studyFormatted = studyHours > 0
+                ? `${studyHours}h ${studyMins}m`
+                : `${studyMins}m ${studySeconds % 60}s`;
 
             // Create Canvas
             const canvasWidth = 800;
