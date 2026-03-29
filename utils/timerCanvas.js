@@ -72,11 +72,11 @@ async function drawTimer(timerData, themeData = {}) {
         .sort(([, timeA], [, timeB]) => timeB - timeA);
 
     const colCount = 2;
-    const itemHeight = 65; 
+    const itemHeight = 42; // smaller to fit more members
     const itemWidth = (listWidth - 40) / colCount;
-    const maxItems = 16; 
+    const maxItems = 25; // show up to 25 members
 
-    ctx.font = 'bold 18px Cairo';
+    ctx.font = 'bold 16px Cairo';
     for (let i = 0; i < Math.min(sortedParticipants.length, maxItems); i++) {
         const [userId, totalSeconds] = sortedParticipants[i];
         const participantName = timerData.participantNames[userId] || `User ${userId.slice(0, 5)}`;

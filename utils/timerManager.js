@@ -53,7 +53,8 @@ class TimerManager {
         const timer = this.activeTimers.get(channelId);
         if (timer) {
             timer.currentParticipants.add(userId);
-            if (!timer.participants[userId]) timer.participants[userId] = 0;
+            // Reset in-session participation timer for this join
+            timer.participants[userId] = 0;
         }
     }
 
@@ -61,6 +62,10 @@ class TimerManager {
         const timer = this.activeTimers.get(channelId);
         if (timer) {
             timer.currentParticipants.delete(userId);
+            // Remove from left-side UI list as requested
+            if (timer.participants[userId] !== undefined) {
+                delete timer.participants[userId];
+            }
         }
     }
 

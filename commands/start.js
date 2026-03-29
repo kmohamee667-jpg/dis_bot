@@ -125,31 +125,38 @@ module.exports = {
                     .setStyle(ButtonStyle.Danger)
             );
 
-            // Logic: Edit vs New Message
-            if (!currentTimer.messageId) {
-                const msg = await interaction.editReply({ 
+            // Logic: Edit vs New Message (force new occasionally on cycle reset)
+            const isFirstRender = !currentTimer.messageId;
+            const shouldRepost = currentTimer.shouldRepost || currentTimer.updateMode === 'new';
+
+            if (isFirstRender) {
+                const msg = await interaction.editReply({
                     embeds: [embed],
-                    files: [attachment], 
-                    components: [stopButton] 
+                    files: [attachment],
+                    components: [stopButton]
                 });
                 currentTimer.messageId = msg.id;
-            } else if (currentTimer.updateMode === 'new') {
+                currentTimer.shouldRepost = false;
+            } else if (shouldRepost) {
+                // Delete existing timer message and repost as new at bottom
                 try {
                     const oldMsg = await interaction.channel.messages.fetch(currentTimer.messageId);
-                    if (oldMsg) await oldMsg.delete();
+                    if (oldMsg) await oldMsg.delete().catch(() => {});
                 } catch (e) {}
 
-                const newMsg = await interaction.channel.send({ 
+                const newMsg = await interaction.channel.send({
                     embeds: [embed],
-                    files: [attachment], 
-                    components: [stopButton] 
+                    files: [attachment],
+                    components: [stopButton]
                 });
                 currentTimer.messageId = newMsg.id;
+                currentTimer.shouldRepost = false;
+                currentTimer.updateMode = 'edit';
             } else {
-                await interaction.editReply({ 
+                await interaction.editReply({
                     embeds: [embed],
-                    files: [attachment], 
-                    components: [stopButton] 
+                    files: [attachment],
+                    components: [stopButton]
                 }).catch(() => {});
             }
         };
@@ -226,6 +233,10 @@ module.exports = {
                             .setColor('#E67E22')
                             .setTimestamp();
                         await interaction.channel.send({ embeds: [nextCycleEmbed] }).catch(() => {});
+
+                        // Force repost timer at bottom after break-to-study switch
+                        timer.shouldRepost = true;
+                        await renderAndSend().catch(() => {});
 
                     } else {
                         // All cycles done — cleanup and announce
