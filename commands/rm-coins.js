@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const db = require('../utils/db');
-const { ALLOWED_USERNAMES } = require('../utils/config');
+
 
 const { isAdmin } = require('../utils/admin-check');
 
@@ -16,8 +16,8 @@ module.exports = {
                 .setDescription('اكتب all لتصفير الجميع')
                 .addChoices({ name: 'all', value: 'all' })),
     async execute(interaction) {
-        if (!isAdmin(interaction)) {
-            return await interaction.reply({ content: '❌ غير مسموح لك باستخدام هذا الأمر!', flags: [MessageFlags.Ephemeral] });
+        if (!isAdmin(interaction, 'rm-coins')) {
+            return await interaction.reply({ content: '❌ You don\'t have permission to use this command.', flags: [MessageFlags.Ephemeral] });
         }
 
         const targetUser = interaction.options.getUser('user');

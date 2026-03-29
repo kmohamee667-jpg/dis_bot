@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const shopDb = require('../utils/shopDb');
-const { ALLOWED_USERNAMES } = require('../utils/config');
+
 
 const { isAdmin } = require('../utils/admin-check');
 
@@ -13,8 +13,8 @@ module.exports = {
                 .setDescription('الرتبة المراد حذفها')
                 .setRequired(true)),
     async execute(interaction) {
-        if (!isAdmin(interaction)) {
-            return await interaction.reply({ content: '❌ غير مسموح لك باستخدام هذا الأمر! (للمسؤولين فقط)', flags: [MessageFlags.Ephemeral] });
+        if (!isAdmin(interaction, 'delete-role')) {
+            return await interaction.reply({ content: '❌ You don\'t have permission to use this command.', flags: [MessageFlags.Ephemeral] });
         }
 
         const role = interaction.options.getRole('role');

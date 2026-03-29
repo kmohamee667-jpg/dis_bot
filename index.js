@@ -7,7 +7,9 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,      // Required to receive messages
+        GatewayIntentBits.MessageContent,     // Required to read message content
     ],
     rest: {
         timeout: 60000 // زيادة وقت الانتظار للاتصال لتجنب أخطاء التايم أوت

@@ -15,9 +15,9 @@ module.exports = {
                 .setDescription('سعر الرتبة بالكوينات')
                 .setRequired(true)),
     async execute(interaction) {
-        if (!isAdmin(interaction)) {
+        if (!isAdmin(interaction, 'add-role')) {
             return await interaction.reply({ 
-                content: '❌ غير مسموح لك باستخدام هذا الأمر! (للمسؤولين فقط)', 
+                content: '❌ You don\'t have permission to use this command.', 
                 flags: [MessageFlags.Ephemeral] 
             });
         }

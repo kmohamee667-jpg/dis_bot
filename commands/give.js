@@ -10,7 +10,7 @@ try {
 } catch (e) {
     console.warn('Cairo fonts missing for give command.');
 }
-const { ALLOWED_USERNAMES } = require('../utils/config');
+
 
 const { isAdmin } = require('../utils/admin-check');
 
@@ -33,9 +33,9 @@ module.exports = {
     async execute(interaction) {
         const { logAction } = require('../utils/logger');
         
-        if (!isAdmin(interaction)) {
+        if (!isAdmin(interaction, 'give')) {
             return await interaction.reply({ 
-                content: '❌ غير مسموح لك باستخدام هذا الأمر! (للمسؤولين فقط)', 
+                content: '❌ You don\'t have permission to use this command.', 
                 flags: [MessageFlags.Ephemeral] 
             });
         }
@@ -61,7 +61,7 @@ module.exports = {
 		for (const u of users) {
 			if (seenIds.has(u.id)) continue;
 			if (u.bot) continue;
-			if (u.id === interaction.user.id && !ALLOWED_USERNAMES.includes(interaction.user.username)) continue;
+			if (u.id === interaction.user.id && !isAdmin(interaction, 'give')) continue;
 			targetUsers.push(u);
 			seenIds.add(u.id);
 		}

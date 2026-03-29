@@ -10,7 +10,6 @@ try {
 } catch (e) {
     console.warn('Cairo fonts missing for coins command.');
 }
-const { ALLOWED_USERNAMES } = require('../utils/config');
 const { isAdmin } = require('../utils/admin-check');
 
 // Helper to format coins (e.g. 1K, 1.5K, 1M)
@@ -43,9 +42,9 @@ module.exports = {
             
             // التحقق من الصلاحيات إذا كان يريد رؤية رصيد شخص آخر
             if (targetUser.id !== interaction.user.id) {
-                if (!isAdmin(interaction)) {
+                if (!isAdmin(interaction, 'coins')) {
                     return await interaction.editReply({ 
-                        content: '❌ غير مسموح لك برؤية رصيد الأعضاء الآخرين!', 
+                        content: '❌ You don\'t have permission to view other users\' balance.', 
                         flags: [MessageFlags.Ephemeral] 
                     });
                 }

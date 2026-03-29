@@ -160,9 +160,14 @@ const timerManager = require('../utils/timerManager');
                         return;
                     }
 
-                    if (interaction.user.id !== timer.starterId) {
+                    // Allow: the starter OR anyone with 'timer-stop' permission
+                    const { isAdmin } = require('../utils/admin-check');
+                    const isStarter = interaction.user.id === timer.starterId;
+                    const hasStopPerm = isAdmin(interaction, 'timer-stop');
+
+                    if (!isStarter && !hasStopPerm) {
                         if (interaction.isRepliable()) {
-                            return await interaction.reply({ content: '❌ فقط الشخص الذي بدأ التايمر يمكنه إيقافه!', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+                            return await interaction.reply({ content: '❌ You don\'t have permission to stop this timer.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
                         }
                         return;
                     }
