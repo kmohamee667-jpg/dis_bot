@@ -5,7 +5,9 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMembers
     ],
     rest: {
         timeout: 60000 // زيادة وقت الانتظار للاتصال لتجنب أخطاء التايم أوت

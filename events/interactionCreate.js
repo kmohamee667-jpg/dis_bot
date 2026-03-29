@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const timerManager = require('../utils/timerManager');
 
 module.exports = {
     name: 'interactionCreate',
@@ -22,7 +23,7 @@ module.exports = {
                 }).join('\n') || '*لا يوجد خيارات*';
 
                 await logAction(interaction.client, interaction.guildId, {
-                    title: '🛰️ تنفيذ أمر سلاش (/)',
+                    title: '🛰️ تنفيذ أمر  (/)',
                     color: '#2ECC71',
                     user: interaction.user,
                     fields: [
@@ -80,6 +81,7 @@ module.exports = {
 
             const shopDb = require('../utils/shopDb');
             const db = require('../utils/db');
+const timerManager = require('../utils/timerManager');
             const { renderShop } = require('../utils/shopUI');
             const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
@@ -143,6 +145,41 @@ module.exports = {
             // Cancel Purchase
             else if (interaction.customId === 'cancel_buy') {
                 await interaction.update({ content: '❌ تم إلغاء عملية الشراء.', embeds: [], components: [] });
+            }
+
+            // --- 4. Timer Stop Button ---
+            else if (interaction.customId.startsWith('timer_stop_')) {
+                const channelId = interaction.customId.replace('timer_stop_', '');
+                const timer = timerManager.getTimer(channelId);
+                
+                try {
+                    if (!timer) {
+                        if (interaction.isRepliable()) {
+                            return await interaction.reply({ content: '❌ هذا التايمر غير موجود أو انتهى بالفعل.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+                        }
+                        return;
+                    }
+
+                    if (interaction.user.id !== timer.starterId) {
+                        if (interaction.isRepliable()) {
+                            return await interaction.reply({ content: '❌ فقط الشخص الذي بدأ التايمر يمكنه إيقافه!', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+                        }
+                        return;
+                    }
+
+                    // Acknowledge the interaction first to prevent Unknown Interaction error
+                    if (interaction.isRepliable()) {
+                        await interaction.deferUpdate().catch(() => {});
+                    }
+
+                    timerManager.stopTimer(channelId);
+                    if (timer.intervalId) clearInterval(timer.intervalId);
+
+                    // Final Cleanup (handled in start.js but double safety here)
+                    await interaction.channel.send(`🛑 **تم إيقاف التايمر يدوياً.** حظاً موفقاً في المذاكرة لاحقاً!`);
+                } catch (error) {
+                    console.error('Interaction error caught silently:', error.message);
+                }
             }
 
             // Confirm Purchase
