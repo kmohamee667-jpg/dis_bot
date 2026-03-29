@@ -119,6 +119,10 @@ class TimerManager {
                     }
                 }
 
+                // Fix: initialize progress for users who joined after timer started
+                if (typeof timer.participantsCoinsProgress[userId] !== 'number') {
+                    timer.participantsCoinsProgress[userId] = 0;
+                }
                 timer.participantsCoinsProgress[userId] += effectiveDelta * rate;
 
                 // 3. Award Coins (Every 60 units = 1 coin)
