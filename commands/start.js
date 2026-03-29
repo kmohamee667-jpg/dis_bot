@@ -167,8 +167,7 @@ module.exports = {
         // Small delay to ensure first render is complete before starting timer
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // 4. Tick Interval (Main Loop) - Updates every 1 second, UI refresh every 5 seconds for smooth natural experience
-        let lastUIRefresh = Date.now();
+        // 4. Tick Interval (Main Loop) - Ticks & refreshes UI every 10 seconds
         const intervalId = setInterval(async () => {
             const timer = timerManager.getTimer(voiceChannel.id);
             if (!timer) {
@@ -176,15 +175,16 @@ module.exports = {
                 return;
             }
 
+            // Advance the timer clock
             timerManager.tick(voiceChannel.id, voiceChannel);
 
-            // Switching Logic
+            // Handle state transitions when a phase finishes
             if (timer.status === 'finished') {
                 if (timer.mode === 'study') {
-                    // --- REWARD / SHOUTOUT: Find the #1 participant ---
+                    // Reward the top participant
                     const sorted = Object.entries(timer.participants)
-                        .sort(([, timeA], [, timeB]) => timeB - timeA);
-                    
+                        .sort(([, a], [, b]) => b - a);
+
                     if (sorted.length > 0) {
                         const [topUserId, totalSecs] = sorted[0];
                         if (totalSecs > 0) {
@@ -193,26 +193,27 @@ module.exports = {
                                 .setDescription(`مبروك يا <@${topUserId}>! أنت المركز الأول في هذه الدورة، عاش يا وحش! استمر على هذا المنوال. 🔥`)
                                 .setColor('#FFD700')
                                 .setTimestamp();
-                            await interaction.channel.send({ embeds: [rewardEmbed] });
+                            await interaction.channel.send({ embeds: [rewardEmbed] }).catch(() => {});
                         }
                     }
 
-                    // Transition to Break
+                    // Transition to break phase
                     timer.mode = 'break';
                     timer.totalTime = timer.breakTime;
                     timer.timeLeft = timer.breakTime;
                     timer.status = 'running';
-                    
+
                     const breakEmbed = new EmbedBuilder()
                         .setTitle('🔔 وقت البريك!')
                         .setDescription(`انتهى وقت المذاكرة! حان وقت الراحة الآن لمدة **${breakTime} دقائق**. استمتع ببريكك! ☕`)
                         .setColor('#3498DB')
                         .setTimestamp();
-                    await interaction.channel.send({ embeds: [breakEmbed], content: `<#${voiceChannel.id}>` });
+                    await interaction.channel.send({ embeds: [breakEmbed] }).catch(() => {});
+
                 } else {
-                    // Break Finished
+                    // Break finished
                     if (timer.currentCycle < timer.totalCycles) {
-                        // Next Cycle Study
+                        // Move to next study cycle
                         timer.currentCycle++;
                         timer.mode = 'study';
                         timer.totalTime = timer.studyTime;
@@ -221,22 +222,22 @@ module.exports = {
 
                         const nextCycleEmbed = new EmbedBuilder()
                             .setTitle('📚 العودة للمذاكرة!')
-                            .setDescription(`انتهى البريك! لنبدأ الدورة رقم **${timer.currentCycle}** من المذاكرة لمدّة **${studyTime} دقائق**. اترك الجوال وركز! 💪`)
+                            .setDescription(`انتهى البريك! لنبدأ الدورة رقم **${timer.currentCycle}** من المذاكرة لمدة **${studyTime} دقائق**. اترك الجوال وركز! 💪`)
                             .setColor('#E67E22')
                             .setTimestamp();
-                        await interaction.channel.send({ embeds: [nextCycleEmbed], content: `<#${voiceChannel.id}>` });
+                        await interaction.channel.send({ embeds: [nextCycleEmbed] }).catch(() => {});
+
                     } else {
-                        // All cycles finished
-                        // --- CLEANUP: Delete the timer message ---
+                        // All cycles done — cleanup and announce
+                        clearInterval(intervalId);
+
                         try {
-                            const currentTimer = timerManager.getTimer(voiceChannel.id);
-                            if (currentTimer && currentTimer.messageId) {
-                                const msgToDelete = await interaction.channel.messages.fetch(currentTimer.messageId).catch(() => null);
+                            if (timer.messageId) {
+                                const msgToDelete = await interaction.channel.messages.fetch(timer.messageId).catch(() => null);
                                 if (msgToDelete) await msgToDelete.delete().catch(() => {});
                             }
                         } catch (e) {}
 
-                        clearInterval(intervalId);
                         timerManager.stopTimer(voiceChannel.id);
 
                         const finishedEmbed = new EmbedBuilder()
@@ -244,19 +245,15 @@ module.exports = {
                             .setDescription(`مبروك! تم الانتهاء من جميع الدورات (**${totalCycles} دورات**). فخورين بك وبمجهودك! اذهب وخذ قسطاً من الراحة. ❤️`)
                             .setColor('#2ECC71')
                             .setTimestamp();
-                        await interaction.channel.send({ embeds: [finishedEmbed], content: `<#${voiceChannel.id}>` });
+                        await interaction.channel.send({ embeds: [finishedEmbed] }).catch(() => {});
                         return;
                     }
                 }
             }
 
-            // Update UI: Every 5 seconds reliably for smooth natural experience
-            const now = Date.now();
-            if (now - lastUIRefresh >= 5000 || timer.timeLeft < 5) {
-                await renderAndSend();
-                lastUIRefresh = now;
-            }
-        }, 1000);
+            // Refresh the timer image every 10 seconds
+            await renderAndSend().catch(err => console.error('Timer render error:', err));
+        }, 10000);
 
         timerData.intervalId = intervalId;
     },
