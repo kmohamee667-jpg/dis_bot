@@ -4,12 +4,10 @@ const path = require('path');
 const dataDir = path.join(__dirname, '../data');
 const usersPath = path.join(dataDir, 'users.json');
 
-// Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// تأكد من وجود الملف أو إنشاؤه
 function readUsers() {
     if (!fs.existsSync(usersPath)) {
         fs.writeFileSync(usersPath, JSON.stringify({}, null, 4));
@@ -17,7 +15,6 @@ function readUsers() {
     try {
         return JSON.parse(fs.readFileSync(usersPath, 'utf8'));
     } catch (e) {
-        // في حالة وجود خطأ في قراءة الـ JSON
         return {};
     }
 }
@@ -33,11 +30,12 @@ function getUser(userId) {
 
 function createUser(userId, username, initialCoins = 0) {
     const users = readUsers();
-    users[userId] = { 
-        username: username, 
+    users[userId] = {
+        username: username,
         coins: initialCoins,
         lastAdded: initialCoins > 0 ? new Date().toISOString() : null,
-        dailyLastClaimed: null
+        dailyLastClaimed: null,
+        studySeconds: 0
     };
     writeUsers(users);
     return users[userId];
@@ -46,15 +44,19 @@ function createUser(userId, username, initialCoins = 0) {
 function updateUserCoins(userId, username, newCoins, updateLastAdded = false) {
     const users = readUsers();
     if (!users[userId]) {
-        users[userId] = { username: username, coins: 0, lastAdded: null, dailyLastClaimed: null };
+        users[userId] = { username, coins: 0, lastAdded: null, dailyLastClaimed: null, studySeconds: 0 };
     } else {
         users[userId].username = username;
+        // Migrate old users missing studySeconds
+        if (typeof users[userId].studySeconds !== 'number') {
+            users[userId].studySeconds = 0;
+        }
     }
-    
+
     if (updateLastAdded && newCoins > users[userId].coins) {
         users[userId].lastAdded = new Date().toISOString();
     }
-    
+
     users[userId].coins = newCoins;
     writeUsers(users);
     return users[userId];
@@ -66,6 +68,31 @@ function setLastClaimed(userId) {
         users[userId].dailyLastClaimed = new Date().toISOString();
         writeUsers(users);
     }
+}
+
+/**
+ * Add study time (seconds) for multiple participants in one atomic write.
+ * participantsMap: { userId: { username, seconds } }
+ */
+function batchAddStudyTime(participantsMap) {
+    const users = readUsers();
+    for (const [userId, { username, seconds }] of Object.entries(participantsMap)) {
+        if (!users[userId]) {
+            users[userId] = { username, coins: 0, lastAdded: null, dailyLastClaimed: null, studySeconds: 0 };
+        } else {
+            users[userId].username = username;
+            if (typeof users[userId].studySeconds !== 'number') {
+                users[userId].studySeconds = 0;
+            }
+        }
+        users[userId].studySeconds += seconds;
+    }
+    writeUsers(users);
+}
+
+function getStudyTime(userId) {
+    const users = readUsers();
+    return users[userId]?.studySeconds || 0;
 }
 
 function resetAllCoins() {
@@ -84,4 +111,13 @@ function resetUserCoins(userId) {
     }
 }
 
-module.exports = { getUser, createUser, updateUserCoins, setLastClaimed, resetAllCoins, resetUserCoins };
+module.exports = {
+    getUser,
+    createUser,
+    updateUserCoins,
+    setLastClaimed,
+    batchAddStudyTime,
+    getStudyTime,
+    resetAllCoins,
+    resetUserCoins
+};
