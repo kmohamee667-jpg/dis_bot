@@ -1,7 +1,15 @@
-const { SlashCommandBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder, GlobalFonts } = require('discord.js');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const db = require('../utils/db');
 const path = require('path');
+
+// Register Cairo Fonts
+try {
+    GlobalFonts.registerFromPath(path.join(__dirname, '../fonts/Cairo-Bold.ttf'), 'Cairo');
+    GlobalFonts.registerFromPath(path.join(__dirname, '../fonts/Cairo-Regular.ttf'), 'Cairo');
+} catch (e) {
+    console.warn('Cairo fonts missing for coins command.');
+}
 const { ALLOWED_USERNAMES } = require('../utils/config');
 const { isAdmin } = require('../utils/admin-check');
 
@@ -105,12 +113,12 @@ module.exports = {
             // 3. User Nickname
             ctx.textAlign = 'center';
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 38px sans-serif';
+            ctx.font = 'bold 38px Cairo';
             ctx.fillText(nickname, centerX, avatarY + 120);
 
             // 4. Server Label: GALAXY (Styled)
             ctx.fillStyle = '#FFD700'; // Gold
-            ctx.font = 'bold 24px sans-serif';
+            ctx.font = 'bold 24px Cairo';
             ctx.shadowBlur = 10;
             ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
             ctx.fillText('GALAXY', centerX, avatarY + 160);
@@ -123,27 +131,35 @@ module.exports = {
 
             // --- COINS SECTION ---
             ctx.fillStyle = '#bbbbbb';
-            ctx.font = '22px sans-serif';
+            ctx.font = '22px Cairo';
             ctx.fillText('COINS', leftColX, rowY);
             
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 45px sans-serif';
+            ctx.font = 'bold 45px Cairo';
             ctx.fillText(formatCoins(user.coins), leftColX, rowY + 50);
 
             // --- LAST ADDED SECTION ---
             ctx.fillStyle = '#bbbbbb';
-            ctx.font = '22px sans-serif';
+            ctx.font = '22px Cairo';
             ctx.fillText('LAST ADDED', rightColX, rowY);
             
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 32px sans-serif';
+            ctx.font = 'bold 32px Cairo';
             ctx.fillText(formatDate(user.lastAdded), rightColX, rowY + 50);
 
-            // Final Attachment
+            // Final Attachment & Embed
             const buffer = await canvas.toBuffer('image/png');
             const attachment = new AttachmentBuilder(buffer, { name: 'profile-card.png' });
             
-            await interaction.editReply({ files: [attachment] });
+            const coinsEmbed = new EmbedBuilder()
+                .setTitle(`📊 بطاقة الكوينات - ${nickname}`)
+                .setDescription(`إليك تفاصيل رصيدك في سيرفر **GALAXY**!`)
+                .setColor('#FFD700') // Gold Theme
+                .setImage('attachment://profile-card.png')
+                .setFooter({ text: 'Galaxy Economy System', iconURL: interaction.client.user.displayAvatarURL() })
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [coinsEmbed], files: [attachment] });
 
         } catch (error) {
             console.error('Error generating coins image:', error);

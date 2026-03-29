@@ -1,5 +1,13 @@
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
+
+// Register Cairo Fonts for better cloud host support (supports Arabic/English)
+try {
+    GlobalFonts.registerFromPath(path.join(__dirname, '../fonts/Cairo-Bold.ttf'), 'Cairo');
+    GlobalFonts.registerFromPath(path.join(__dirname, '../fonts/Cairo-Regular.ttf'), 'Cairo');
+} catch (e) {
+    console.error('Warning: Cairo fonts not found in /fonts/ directory. Falling back to system fonts.');
+}
 
 /**
  * Draw the dynamic timer image (LANDSCAPE REDESIGN)
@@ -55,7 +63,7 @@ async function drawTimer(timerData, themeData = {}) {
 
     // Header for members
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 32px sans-serif';
+    ctx.font = 'bold 32px Cairo';
     ctx.textAlign = 'left';
     ctx.fillText('👥 Active members', listX + 25, listY + 50);
 
@@ -68,7 +76,7 @@ async function drawTimer(timerData, themeData = {}) {
     const itemWidth = (listWidth - 40) / colCount;
     const maxItems = 16; 
 
-    ctx.font = 'bold 18px sans-serif';
+    ctx.font = 'bold 18px Cairo';
     for (let i = 0; i < Math.min(sortedParticipants.length, maxItems); i++) {
         const [userId, totalSeconds] = sortedParticipants[i];
         const participantName = timerData.participantNames[userId] || `User ${userId.slice(0, 5)}`;
@@ -146,7 +154,7 @@ async function drawTimer(timerData, themeData = {}) {
 
         // Rank Badge / Crown for #1
         if (i === 0 && totalSeconds > 0) {
-            ctx.font = '32px sans-serif';
+            ctx.font = '32px Cairo';
             ctx.textAlign = 'center';
             ctx.fillText('👑', itemX - 15, itemY + 35); // Next to the pill
         }
@@ -155,7 +163,7 @@ async function drawTimer(timerData, themeData = {}) {
         const isTopOne = (i === 0 && totalSeconds > 0);
         ctx.fillStyle = isTopOne ? '#000000' : '#ffffff';
         ctx.textAlign = 'left';
-        ctx.font = 'bold 15px sans-serif';
+        ctx.font = 'bold 15px Cairo';
         const truncatedName = participantName.length > 8 ? participantName.slice(0, 7) + '..' : participantName;
         ctx.fillText(`${rankIcon} ${truncatedName}`, itemX + 55, itemY + 22);
 
@@ -164,7 +172,7 @@ async function drawTimer(timerData, themeData = {}) {
         const pSecs = totalSeconds % 60;
         const pTimeStr = `${pMins}m ${pSecs}s`;
         ctx.fillStyle = isTopOne ? '#000000' : 'rgba(255, 255, 255, 0.8)';
-        ctx.font = 'italic 13px sans-serif';
+        ctx.font = 'italic 13px Cairo';
         ctx.fillText(pTimeStr, itemX + 55, itemY + 40);
 
         // Status indicator dot for non-top-3 (if active)
@@ -180,7 +188,7 @@ async function drawTimer(timerData, themeData = {}) {
     if (sortedParticipants.length > maxItems) {
         ctx.fillStyle = '#aaaaaa';
         ctx.textAlign = 'center';
-        ctx.font = '14px sans-serif';
+        ctx.font = '14px Cairo';
         ctx.fillText(`+ ${sortedParticipants.length - maxItems} more..`, listX + listWidth / 2, listY + listHeight - 20);
     }
 
@@ -222,13 +230,13 @@ async function drawTimer(timerData, themeData = {}) {
     const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 130px sans-serif'; // Larger text
+    ctx.font = 'bold 130px Cairo'; // Larger text
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(timeStr, timerCenterX, timerCenterY - 20);
 
     // Mode Title
-    ctx.font = 'bold 36px sans-serif';
+    ctx.font = 'bold 36px Cairo';
     ctx.fillStyle = circleColor;
     const modeStr = timerData.mode === 'study' ? '📖 STUDYING' : '☕ BREAKING';
     ctx.fillText(modeStr, timerCenterX, timerCenterY + 85);
@@ -236,12 +244,12 @@ async function drawTimer(timerData, themeData = {}) {
     // INFO BLOCS (Metadata around circle)
     // Starter Info
     ctx.textAlign = 'center';
-    ctx.font = 'bold 20px sans-serif';
+    ctx.font = 'bold 20px Cairo';
     ctx.fillStyle = '#cccccc';
     ctx.fillText(`Starter: ${timerData.starterName || 'System'}`, timerCenterX, timerCenterY - 220);
     
     // Cycle & Theme Info
-    ctx.font = 'italic 18px sans-serif';
+    ctx.font = 'italic 18px Cairo';
     ctx.fillText(`Cycle ${timerData.currentCycle}/${timerData.totalCycles} | Theme: ${themeData.name || 'Default'}`, timerCenterX, timerCenterY + 130);
 
     return canvas.toBuffer('image/png');

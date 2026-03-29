@@ -9,6 +9,9 @@ module.exports = {
         if (newState.channelId) {
             const timer = timerManager.getTimer(newState.channelId);
             if (timer) {
+                // EXCLUDE BOTS
+                if (newState.member && newState.member.user.bot) return;
+
                 timerManager.addParticipant(newState.channelId, newState.id);
                 // Cache user info for display
                 if (newState.member) {

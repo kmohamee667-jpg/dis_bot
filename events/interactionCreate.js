@@ -175,8 +175,21 @@ const timerManager = require('../utils/timerManager');
                     timerManager.stopTimer(channelId);
                     if (timer.intervalId) clearInterval(timer.intervalId);
 
-                    // Final Cleanup (handled in start.js but double safety here)
-                    await interaction.channel.send(`🛑 **تم إيقاف التايمر يدوياً.** حظاً موفقاً في المذاكرة لاحقاً!`);
+                    // --- NEW: Delete the timer message immediately ---
+                    if (timer.messageId) {
+                        try {
+                            const msgToDelete = await interaction.channel.messages.fetch(timer.messageId).catch(() => null);
+                            if (msgToDelete) await msgToDelete.delete().catch(() => {});
+                        } catch (e) {}
+                    }
+
+                    const stopEmbed = new EmbedBuilder()
+                        .setTitle('🛑 تم إيقاف التايمر')
+                        .setDescription('تم إيقاف المؤقت يدوياً بطلب من المنظم. حظاً موفقاً في المذاكرة لاحقاً! 💪')
+                        .setColor('#E74C3C')
+                        .setTimestamp();
+
+                    await interaction.channel.send({ embeds: [stopEmbed] });
                 } catch (error) {
                     console.error('Interaction error caught silently:', error.message);
                 }

@@ -1,7 +1,15 @@
-const { SlashCommandBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder, GlobalFonts } = require('discord.js');
 const db = require('../utils/db');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const path = require('path');
+
+// Register Cairo Fonts
+try {
+    GlobalFonts.registerFromPath(path.join(__dirname, '../fonts/Cairo-Bold.ttf'), 'Cairo');
+    GlobalFonts.registerFromPath(path.join(__dirname, '../fonts/Cairo-Regular.ttf'), 'Cairo');
+} catch (e) {
+    console.warn('Cairo fonts missing for give command.');
+}
 const { ALLOWED_USERNAMES } = require('../utils/config');
 
 const { isAdmin } = require('../utils/admin-check');
@@ -112,12 +120,12 @@ module.exports = {
 				ctx.restore();
 
 				// 3. Names
-				ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.font = 'bold 35px sans-serif'; ctx.fillText(targetUser.username, centerX, avatarY + 110);
-				ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px sans-serif'; ctx.fillText('GALAXY', centerX, avatarY + 145);
+				ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.font = 'bold 35px Cairo'; ctx.fillText(targetUser.username, centerX, avatarY + 110);
+				ctx.fillStyle = '#FFD700'; ctx.font = 'bold 22px Cairo'; ctx.fillText('GALAXY', centerX, avatarY + 145);
 
 				// 4. Balance Transition
 				const contentY = 360;
-				ctx.font = 'bold 45px sans-serif';
+				ctx.font = 'bold 45px Cairo';
 				const oldText = (oldBalance || 0).toLocaleString(); const oldWidth = ctx.measureText(oldText).width;
 				const arrowText = ' ➔ '; const arrowWidth = ctx.measureText(arrowText).width;
 				const newText = (newBalance || 0).toLocaleString(); const newWidth = ctx.measureText(newText).width;
@@ -126,15 +134,31 @@ module.exports = {
 				ctx.fillStyle = '#ff6b6b'; ctx.textAlign = 'left'; ctx.fillText(oldText, currentX, contentY); currentX += oldWidth;
 				ctx.fillStyle = '#ffffff'; ctx.fillText(arrowText, currentX, contentY); currentX += arrowWidth;
 				ctx.fillStyle = '#4ee44e'; ctx.fillText(newText, currentX, contentY);
-				ctx.fillStyle = '#bbbbbb'; ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('BALANCE UPDATED', centerX, contentY - 60);
+				ctx.fillStyle = '#bbbbbb'; ctx.font = '20px Cairo'; ctx.textAlign = 'center'; ctx.fillText('BALANCE UPDATED', centerX, contentY - 60);
 
 				const buffer = await canvas.toBuffer('image/png');
 				const attachment = new AttachmentBuilder(buffer, { name: 'transfer.png' });
-				await interaction.editReply({ files: [attachment] });
+				
+				const giveEmbed = new EmbedBuilder()
+					.setTitle('💸 عملية تحويل ناجحة')
+					.setDescription(`تم إضافة **${amount.toLocaleString()}** كوين إلى حساب <@${targetUser.id}> بنجاح!`)
+					.setColor('#4ee44e')
+					.setImage('attachment://transfer.png')
+					.setFooter({ text: 'Galaxy Transaction System', iconURL: interaction.client.user.displayAvatarURL() })
+					.setTimestamp();
+
+				await interaction.editReply({ embeds: [giveEmbed], files: [attachment] });
 			} else {
 				// عرض قائمة ملخصة لعدة مستخدمين
 				const userList = results.map(r => `• **${r.targetUser.username}**: \`${(r.oldBalance || 0).toLocaleString()}\` ➔ \`${(r.newBalance || 0).toLocaleString()}\``).join('\n');
-				await interaction.editReply({ content: `✅ تم إيداع **${(amount || 0).toLocaleString()}** كوين لـ **${targetUsers.length}** أعضاء بنجاح!\n\n${userList}` });
+				
+				const bulkEmbed = new EmbedBuilder()
+					.setTitle('✅ عمليات إيداع متعددة')
+					.setDescription(`تم إيداع **${(amount || 0).toLocaleString()}** كوين لـ **${targetUsers.length}** أعضاء بنجاح!\n\n${userList}`)
+					.setColor('#4ee44e')
+					.setTimestamp();
+
+				await interaction.editReply({ embeds: bulkEmbed });
 			}
 
 		} catch (error) {

@@ -80,16 +80,19 @@ module.exports = {
             interactionToken: interaction.token
         };
 
-        // Add current members in VC
+        // Add current members in VC (EXCLUDING BOTS)
         voiceChannel.members.forEach(member => {
+            if (member.user.bot) return; // Skip Apps/Bots
             timerData.participantNames[member.id] = member.displayName || member.user.username;
             timerData.participantAvatars[member.id] = member.user.displayAvatarURL({ extension: 'png', size: 128 });
         });
 
         timerManager.startTimer(voiceChannel.id, timerData);
         
-        // Initial members tracking
-        voiceChannel.members.forEach(member => timerManager.addParticipant(voiceChannel.id, member.id));
+        // Initial members tracking (EXCLUDING BOTS)
+        voiceChannel.members.forEach(member => {
+            if (!member.user.bot) timerManager.addParticipant(voiceChannel.id, member.id);
+        });
 
         // 3. Rendering & Loop
         let lastManualRefresh = 0;
@@ -100,17 +103,18 @@ module.exports = {
             const buffer = await drawTimer(currentTimer, theme || {});
             const attachment = new AttachmentBuilder(buffer, { name: 'timer.png' });
             
-            // Create Embed Wrapper (Purple Theme)
+            // Create Premium Embed Wrapper (Purple Theme with Border)
             const embed = new EmbedBuilder()
                 .setTitle('⏳ جلسة المذاكرة النشطة')
-                .setDescription(`جاري المذاكرة في <#${voiceChannel.id}>`)
-                .setColor('#673ab7') // Purple
+                .setDescription(`> جاري المذاكرة والتركيز الآن في <#${voiceChannel.id}>\n> ممنوع الإزعاج 🤫`)
+                .setColor('#673ab7') // Deep Purple Border
                 .setImage('attachment://timer.png')
                 .addFields(
                     { name: '👤 المنظم', value: `\`${currentTimer.starterName}\``, inline: true },
                     { name: '🎭 الثيم', value: `\`${theme.name || 'Default'}\``, inline: true },
                     { name: '🔄 الجولة', value: `\`${currentTimer.currentCycle}/${currentTimer.totalCycles}\``, inline: true }
                 )
+                .setFooter({ text: 'Antigravity Timer System • بالتوفيق يا بطل!', iconURL: interaction.client.user.displayAvatarURL() })
                 .setTimestamp();
 
             const stopButton = new ActionRowBuilder().addComponents(
@@ -179,7 +183,12 @@ module.exports = {
                     if (sorted.length > 0) {
                         const [topUserId, totalSecs] = sorted[0];
                         if (totalSecs > 0) {
-                            await interaction.channel.send(`🥇 **مبروك يا <@${topUserId}>!** أنت المركز الأول في هذي السايكل، عاش بطل! كمل بالتوفيق.`);
+                            const rewardEmbed = new EmbedBuilder()
+                                .setTitle('🥇 بطل السايكل!')
+                                .setDescription(`مبروك يا <@${topUserId}>! أنت المركز الأول في هذه الدورة، عاش يا وحش! استمر على هذا المنوال. 🔥`)
+                                .setColor('#FFD700')
+                                .setTimestamp();
+                            await interaction.channel.send({ embeds: [rewardEmbed] });
                         }
                     }
 
@@ -188,7 +197,13 @@ module.exports = {
                     timer.totalTime = timer.breakTime;
                     timer.timeLeft = timer.breakTime;
                     timer.status = 'running';
-                    await interaction.channel.send(`🔔 **انتهى وقت المذاكرة!** حان وقت البريك يا شباب (${breakTime} دقائق). <#${voiceChannel.id}>`);
+                    
+                    const breakEmbed = new EmbedBuilder()
+                        .setTitle('🔔 وقت البريك!')
+                        .setDescription(`انتهى وقت المذاكرة! حان وقت الراحة الآن لمدة **${breakTime} دقائق**. استمتع ببريكك! ☕`)
+                        .setColor('#3498DB')
+                        .setTimestamp();
+                    await interaction.channel.send({ embeds: [breakEmbed], content: `<#${voiceChannel.id}>` });
                 } else {
                     // Break Finished
                     if (timer.currentCycle < timer.totalCycles) {
@@ -198,25 +213,33 @@ module.exports = {
                         timer.totalTime = timer.studyTime;
                         timer.timeLeft = timer.studyTime;
                         timer.status = 'running';
-                        await interaction.channel.send(`📚 **انتهى البريك!** لنبدأ الدورة رقم ${timer.currentCycle} من المذاكرة (${studyTime} دقائق). <#${voiceChannel.id}>`);
+
+                        const nextCycleEmbed = new EmbedBuilder()
+                            .setTitle('📚 العودة للمذاكرة!')
+                            .setDescription(`انتهى البريك! لنبدأ الدورة رقم **${timer.currentCycle}** من المذاكرة لمدّة **${studyTime} دقائق**. اترك الجوال وركز! 💪`)
+                            .setColor('#E67E22')
+                            .setTimestamp();
+                        await interaction.channel.send({ embeds: [nextCycleEmbed], content: `<#${voiceChannel.id}>` });
                     } else {
                         // All cycles finished
                         // --- CLEANUP: Delete the timer message ---
                         try {
                             const currentTimer = timerManager.getTimer(voiceChannel.id);
                             if (currentTimer && currentTimer.messageId) {
-                                if (currentTimer.updateMode === 'new') {
-                                    const lastMsg = await interaction.channel.messages.fetch(currentTimer.messageId);
-                                    if (lastMsg) await lastMsg.delete();
-                                } else {
-                                    await interaction.deleteReply();
-                                }
+                                const msgToDelete = await interaction.channel.messages.fetch(currentTimer.messageId).catch(() => null);
+                                if (msgToDelete) await msgToDelete.delete().catch(() => {});
                             }
                         } catch (e) {}
 
                         clearInterval(intervalId);
                         timerManager.stopTimer(voiceChannel.id);
-                        await interaction.channel.send(`🏆 **مبروك!** تم الانتهاء من جميع الدورات (${totalCycles} دورات). أحسنتم العمل! <#${voiceChannel.id}>`);
+
+                        const finishedEmbed = new EmbedBuilder()
+                            .setTitle('🏆 تم الإنجاز!')
+                            .setDescription(`مبروك! تم الانتهاء من جميع الدورات (**${totalCycles} دورات**). فخورين بك وبمجهودك! اذهب وخذ قسطاً من الراحة. ❤️`)
+                            .setColor('#2ECC71')
+                            .setTimestamp();
+                        await interaction.channel.send({ embeds: [finishedEmbed], content: `<#${voiceChannel.id}>` });
                         return;
                     }
                 }
