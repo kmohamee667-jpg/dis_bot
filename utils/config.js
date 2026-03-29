@@ -10,22 +10,19 @@
  */
 module.exports = {
     PERMISSIONS: {
-        // /give — Give coins to users
         'give': {
             roles: ['معلم', 'معلمه'],
             users: ['adham3963', 'x99gg', 'khal3d0047', '_erllo__.']
         },
 
-        // /rm-coins — Reset coins for a user or all
         'rm-coins': {
             roles: [],
             users: ['adham3963', 'x99gg', 'khal3d0047', '_erllo__.']
         },
 
-        // /coins (viewing other users) — View another user's balance
         'coins': {
             roles: ['معلم', 'معلمه'],
-            users: ['adham3963', 'x99gg', 'khal3d0047', '_erllo__.', 'kaaaa11_11']
+            users: ['adham3963', 'x99gg', 'khal3d0047', '_erllo__.']
         },
 
         // /add-role — Add a role to the shop
@@ -55,6 +52,24 @@ module.exports = {
         // Timer Stop — Users/Roles who can stop ANY timer (even if they didn't start it)
         'timer-stop': {
             roles: ['OWNER'],
+            users: ['adham3963', 'x99gg', 'khal3d0047', '_erllo__.']
+        },
+
+        // Challenge command permission
+        'challenge': {
+            roles: ['معلم', 'معلمه', 'OWNER'],
+            users: ['adham3963', 'x99gg', 'khal3d0047', '_erllo__.']
+        },
+
+        // Continue challenge cycle permission
+        'challenge-continue': {
+            roles: ['معلم', 'معلمه', 'OWNER'],
+            users: ['adham3963', 'x99gg', 'khal3d0047', '_erllo__.']
+        },
+
+        // Top Time (study-time leaderboard)
+        'top-time': {
+            roles: ['everyone'],
             users: ['adham3963', 'x99gg', 'khal3d0047', '_erllo__.']
         },
 

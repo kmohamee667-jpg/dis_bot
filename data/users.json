@@ -1,8 +1,8 @@
 {
     "1447951012332699871": {
         "username": "Khaled",
-        "coins": 995145,
-        "lastAdded": "2026-03-29T06:38:11.482Z",
+        "coins": 995165,
+        "lastAdded": "2026-03-29T08:20:11.823Z",
         "dailyLastClaimed": "2026-03-27T19:41:15.415Z"
     },
     "956891840144101466": {
@@ -25,20 +25,20 @@
     },
     "1466515365663346864": {
         "username": "x99gg",
-        "coins": 3,
-        "lastAdded": "2026-03-29T06:38:00.127Z",
-        "dailyLastClaimed": "2026-03-27T19:14:39.407Z"
+        "coins": 77,
+        "lastAdded": "2026-03-29T08:33:42.631Z",
+        "dailyLastClaimed": "2026-03-29T08:33:42.635Z"
     },
     "1441144616492601384": {
-        "username": "mrymtrq.",
-        "coins": 0,
-        "lastAdded": null,
+        "username": "الدكتورة",
+        "coins": 10,
+        "lastAdded": "2026-03-29T08:06:09.082Z",
         "dailyLastClaimed": null
     },
     "1438572135114084512": {
-        "username": "kaaaa11_11",
-        "coins": 0,
-        "lastAdded": "2026-03-27T18:29:42.454Z",
+        "username": "الملكه",
+        "coins": 20,
+        "lastAdded": "2026-03-29T08:20:11.819Z",
         "dailyLastClaimed": null
     },
     "1470836367868301352": {
@@ -54,9 +54,9 @@
         "dailyLastClaimed": "2026-03-27T19:43:41.990Z"
     },
     "810966863466332210": {
-        "username": "darksofa.",
-        "coins": 27,
-        "lastAdded": "2026-03-27T19:42:39.087Z",
+        "username": "暗いソファ",
+        "coins": 46,
+        "lastAdded": "2026-03-29T08:19:21.481Z",
         "dailyLastClaimed": "2026-03-27T19:42:39.089Z"
     },
     "1195813561352585239": {
@@ -66,9 +66,9 @@
         "dailyLastClaimed": "2026-03-28T04:09:15.655Z"
     },
     "1327412006822744087": {
-        "username": "doma_55",
-        "coins": 200,
-        "lastAdded": "2026-03-28T06:09:51.332Z",
+        "username": "Adam",
+        "coins": 211,
+        "lastAdded": "2026-03-29T08:19:23.493Z",
         "dailyLastClaimed": null
     },
     "452970695618723860": {
@@ -103,14 +103,38 @@
     },
     "1080596817869275186": {
         "username": "!....",
-        "coins": 5,
-        "lastAdded": "2026-03-29T06:38:11.480Z",
+        "coins": 12,
+        "lastAdded": "2026-03-29T08:19:22.495Z",
         "dailyLastClaimed": null
     },
     "1308536624392699946": {
         "username": "⚜⚜𝐎m̶ᴀŗ⚜⚜",
-        "coins": 2,
-        "lastAdded": "2026-03-29T06:38:11.484Z",
+        "coins": 12,
+        "lastAdded": "2026-03-29T08:06:32.311Z",
+        "dailyLastClaimed": null
+    },
+    "1351509422219726848": {
+        "username": "7.k7k",
+        "coins": 42,
+        "lastAdded": "2026-03-29T08:33:54.976Z",
+        "dailyLastClaimed": "2026-03-29T08:33:54.978Z"
+    },
+    "1452937704928186402": {
+        "username": "raneem",
+        "coins": 23,
+        "lastAdded": "2026-03-29T08:20:00.434Z",
+        "dailyLastClaimed": null
+    },
+    "1350207291097350225": {
+        "username": "twinkle04426",
+        "coins": 25,
+        "lastAdded": "2026-03-29T08:34:35.068Z",
+        "dailyLastClaimed": "2026-03-29T08:34:35.071Z"
+    },
+    "953607486139666453": {
+        "username": "TEKO",
+        "coins": 1,
+        "lastAdded": "2026-03-29T08:19:56.391Z",
         "dailyLastClaimed": null
     }
 }

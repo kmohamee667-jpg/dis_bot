@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder, GlobalFonts } = require('discord.js');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const db = require('../utils/db');
+const timerManager = require('../utils/timerManager');
 const path = require('path');
 
 // Register Cairo Fonts
@@ -69,6 +70,10 @@ module.exports = {
                 user = db.updateUserCoins(userId, username, user.coins);
             }
 
+            // Get study time from timerManager
+            const studySeconds = timerManager.getUserStudyTime(interaction.guildId, userId);
+            const studyFormatted = `${Math.floor(studySeconds / 60)}m ${studySeconds % 60}s`;
+
             // Create Canvas
             const canvasWidth = 800;
             const canvasHeight = 450;
@@ -123,28 +128,38 @@ module.exports = {
             ctx.fillText('GALAXY', centerX, avatarY + 160);
             ctx.shadowBlur = 0; // Reset shadow
 
-            // 5. Data Sections (Coins & Last Added)
+            // 5. Data Sections (Coins, Study Time & Last Added)
             const rowY = 350;
-            const leftColX = 220;
-            const rightColX = 580;
+            const col1X = 150;
+            const col2X = 400;
+            const col3X = 650;
 
             // --- COINS SECTION ---
             ctx.fillStyle = '#bbbbbb';
             ctx.font = '22px Cairo';
-            ctx.fillText('COINS', leftColX, rowY);
+            ctx.fillText('COINS', col1X, rowY);
             
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 45px Cairo';
-            ctx.fillText(formatCoins(user.coins), leftColX, rowY + 50);
+            ctx.fillText(formatCoins(user.coins), col1X, rowY + 50);
+
+            // --- STUDY TIME SECTION ---
+            ctx.fillStyle = '#bbbbbb';
+            ctx.font = '22px Cairo';
+            ctx.fillText('STUDY TIME', col2X, rowY);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 32px Cairo';
+            ctx.fillText(studyFormatted, col2X, rowY + 50);
 
             // --- LAST ADDED SECTION ---
             ctx.fillStyle = '#bbbbbb';
             ctx.font = '22px Cairo';
-            ctx.fillText('LAST ADDED', rightColX, rowY);
+            ctx.fillText('LAST ADDED', col3X, rowY);
             
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 32px Cairo';
-            ctx.fillText(formatDate(user.lastAdded), rightColX, rowY + 50);
+            ctx.fillText(formatDate(user.lastAdded), col3X, rowY + 50);
 
             // Final Attachment & Embed
             const buffer = await canvas.toBuffer('image/png');

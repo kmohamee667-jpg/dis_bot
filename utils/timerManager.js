@@ -5,6 +5,7 @@ const db = require('./db');
 class TimerManager {
     constructor() {
         this.activeTimers = new Map(); // Key: voiceChannelId
+        this.guildStudyTotals = new Map(); // Key: guildId -> { userId: totalSeconds }
     }
 
     /**
@@ -41,6 +42,19 @@ class TimerManager {
      */
     getTimer(channelId) {
         return this.activeTimers.get(channelId);
+    }
+
+    getGuildTopStudy(guildId, topN = 5) {
+        const guildMap = this.guildStudyTotals.get(guildId) || {};
+        return Object.entries(guildMap)
+            .map(([userId, seconds]) => ({ userId, seconds }))
+            .sort((a, b) => b.seconds - a.seconds)
+            .slice(0, topN);
+    }
+
+    getUserStudyTime(guildId, userId) {
+        const guildMap = this.guildStudyTotals.get(guildId) || {};
+        return guildMap[userId] || 0;
     }
 
     /**
@@ -80,11 +94,14 @@ class TimerManager {
                 if (!timer.participants[userId]) timer.participants[userId] = 0;
                 timer.participants[userId] += delta;
 
-                // 2. Calculate Coin Progress
-                if (!timer.participantsCoinsProgress[userId]) timer.participantsCoinsProgress[userId] = 0;
+                    // 1.b Update guild totals for top-time command
+                    if (timer.guildId) {
+                        if (!this.guildStudyTotals.has(timer.guildId)) this.guildStudyTotals.set(timer.guildId, {});
+                        const guildMap = this.guildStudyTotals.get(timer.guildId);
+                        if (!guildMap[userId]) guildMap[userId] = 0;
+                        guildMap[userId] += delta;
+                    }
 
-                // Check Bonuses
-                let rate = 1; // Default: 1 coin per minute (60 units)
                 if (voiceChannel) {
                     const member = voiceChannel.members.get(userId);
                     if (member && member.voice) {

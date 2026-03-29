@@ -200,6 +200,59 @@ const timerManager = require('../utils/timerManager');
                 }
             }
 
+            // --- Challenge Continue Button ---
+            else if (interaction.customId.startsWith('timer_continue_')) {
+                const channelId = interaction.customId.replace('timer_continue_', '');
+                const timer = timerManager.getTimer(channelId);
+
+                if (!timer) {
+                    return await interaction.reply({ content: '❌ هذا التايمر غير موجود أو انتهى بالفعل.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+                }
+
+                if (!timer.cycleMode || timer.cycleMode !== 'manual') {
+                    return await interaction.reply({ content: '⚠️ لا يمكن استكمال هذا التحدي، لأنه ليس في وضع الانتظار اليدوي.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+                }
+
+                if (!timer.waitingContinue) {
+                    return await interaction.reply({ content: '⚠️ لا توجد دورة في انتظار الاستكمال الآن.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+                }
+
+                const { isAdmin } = require('../utils/admin-check');
+                const isStarter = interaction.user.id === timer.starterId;
+                const hasContinuePerm = isAdmin(interaction, 'challenge-continue');
+
+                if (!isStarter && !hasContinuePerm) {
+                    return await interaction.reply({ content: '❌ ليس لديك صلاحية استكمال الدورة.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
+                }
+
+                timer.waitingContinue = false;
+                timer.status = 'running';
+                timer.currentCycle += 1;
+                timer.mode = 'study';
+                timer.totalTime = timer.studyTime;
+                timer.timeLeft = timer.studyTime;
+                timer.cycleParticipants = {};
+
+                // Delete the continue button message after use
+                if (timer.continueMessageId) {
+                    const contMsg = await interaction.channel.messages.fetch(timer.continueMessageId).catch(() => null);
+                    if (contMsg) await contMsg.delete().catch(() => {});
+                    timer.continueMessageId = null;
+                }
+
+                // Recreate timer UI message so old button-containing message is removed
+                if (timer.messageId) {
+                    const oldTimerMsg = await interaction.channel.messages.fetch(timer.messageId).catch(() => null);
+                    if (oldTimerMsg) await oldTimerMsg.delete().catch(() => {});
+                    timer.messageId = null;
+                }
+
+                await interaction.reply({ content: `✅ تم استكمال دورة التحدي. بدأنا الدورة ${timer.currentCycle} الآن.`, flags: [MessageFlags.Ephemeral] });
+                if (timer.refreshCallback) {
+                    await timer.refreshCallback().catch(() => {});
+                }
+            }
+
             // Confirm Purchase
             else if (interaction.customId.startsWith('confirm_buy_')) {
                 const roleId = interaction.customId.replace('confirm_buy_', '');
