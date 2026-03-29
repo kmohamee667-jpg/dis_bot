@@ -73,7 +73,7 @@ class TimerManager {
 
     /**
      * Update participant times and award coins
-     * NOW WITH ACCURATE TIMING AND NO NEGATIVE VALUES
+     * NOW WITH ACCURATE TIMING AND NO NEGATIVE VALUES - INDEPENDENT TIMER
      */
     tick(channelId, voiceChannel = null) {
         const timer = this.activeTimers.get(channelId);
@@ -81,11 +81,13 @@ class TimerManager {
 
         const now = Date.now();
         const delta = Math.floor((now - timer.lastUpdate) / 1000);
-        
-        if (delta <= 0) return;
+
+        // Always update at least 1 second if more than 500ms have passed (for reliability)
+        const effectiveDelta = delta > 0 ? delta : (now - timer.lastUpdate >= 500 ? 1 : 0);
+        if (effectiveDelta <= 0) return;
 
         // Update time left - but never allow negative
-        timer.timeLeft -= delta;
+        timer.timeLeft -= effectiveDelta;
         if (timer.timeLeft < 0) {
             timer.timeLeft = 0;
         }
@@ -96,14 +98,14 @@ class TimerManager {
             timer.currentParticipants.forEach(userId => {
                 // 1. Update Participation Time (for image)
                 if (!timer.participants[userId]) timer.participants[userId] = 0;
-                timer.participants[userId] += delta;
+                timer.participants[userId] += effectiveDelta;
 
                     // 1.b Update guild totals for top-time command
                     if (timer.guildId) {
                         if (!this.guildStudyTotals.has(timer.guildId)) this.guildStudyTotals.set(timer.guildId, {});
                         const guildMap = this.guildStudyTotals.get(timer.guildId);
                         if (!guildMap[userId]) guildMap[userId] = 0;
-                        guildMap[userId] += delta;
+                        guildMap[userId] += effectiveDelta;
                     }
 
                 let rate = 1;
@@ -117,7 +119,7 @@ class TimerManager {
                     }
                 }
 
-                timer.participantsCoinsProgress[userId] += delta * rate;
+                timer.participantsCoinsProgress[userId] += effectiveDelta * rate;
 
                 // 3. Award Coins (Every 60 units = 1 coin)
                 if (timer.participantsCoinsProgress[userId] >= 60) {
