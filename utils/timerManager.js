@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const db = require('./db');
 
 class TimerManager {
     constructor() {
@@ -15,6 +16,7 @@ class TimerManager {
         data.participants = data.participants || {};
         data.participantNames = data.participantNames || {};
         data.participantAvatars = data.participantAvatars || {};
+        data.participantsCoinsProgress = data.participantsCoinsProgress || {}; // Tracks progress towards 1 coin (60 units)
         data.currentParticipants = data.currentParticipants || new Set();
         data.lastUpdate = Date.now();
         data.status = 'running';
@@ -56,9 +58,9 @@ class TimerManager {
     }
 
     /**
-     * Update participant times
+     * Update participant times and award coins
      */
-    tick(channelId) {
+    tick(channelId, voiceChannel = null) {
         const timer = this.activeTimers.get(channelId);
         if (!timer) return;
 
@@ -71,11 +73,40 @@ class TimerManager {
         timer.timeLeft -= delta;
         timer.lastUpdate = now;
 
-        // --- COMPETITIVE FIX: Only count study time ---
+        // --- 🪙 ECONOMY INTEGRATION: Award coins ---
         if (timer.mode === 'study') {
             timer.currentParticipants.forEach(userId => {
+                // 1. Update Participation Time (for image)
                 if (!timer.participants[userId]) timer.participants[userId] = 0;
                 timer.participants[userId] += delta;
+
+                // 2. Calculate Coin Progress
+                if (!timer.participantsCoinsProgress[userId]) timer.participantsCoinsProgress[userId] = 0;
+
+                // Check Bonuses
+                let rate = 1; // Default: 1 coin per minute (60 units)
+                if (voiceChannel) {
+                    const member = voiceChannel.members.get(userId);
+                    if (member && member.voice) {
+                        // Bonus: 2 coins per minute if streaming or camera on
+                        if (member.voice.streaming || member.voice.selfVideo) {
+                            rate = 2;
+                        }
+                    }
+                }
+
+                timer.participantsCoinsProgress[userId] += delta * rate;
+
+                // 3. Award Coins (Every 60 units = 1 coin)
+                if (timer.participantsCoinsProgress[userId] >= 60) {
+                    const coinsToAward = Math.floor(timer.participantsCoinsProgress[userId] / 60);
+                    timer.participantsCoinsProgress[userId] %= 60; // Keep the remainder
+
+                    // Update Database
+                    const username = timer.participantNames[userId] || 'User';
+                    const user = db.getUser(userId) || db.createUser(userId, username, 0);
+                    db.updateUserCoins(userId, username, user.coins + coinsToAward, true);
+                }
             });
         }
         // ----------------------------------------------

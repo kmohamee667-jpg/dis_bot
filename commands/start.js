@@ -171,7 +171,7 @@ module.exports = {
                 return;
             }
 
-            timerManager.tick(voiceChannel.id);
+            timerManager.tick(voiceChannel.id, voiceChannel);
 
             // Switching Logic
             if (timer.status === 'finished') {
