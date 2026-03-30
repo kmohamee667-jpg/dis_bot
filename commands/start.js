@@ -7,15 +7,15 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('start')
         .setDescription('بدأ تايمر المذاكرة (Pomodoro)')
-        .addIntegerOption(option => 
+        .addIntegerOption(option =>
             option.setName('study_time')
                 .setDescription('وقت الدراسة بالدقائق')
                 .setRequired(true))
-        .addIntegerOption(option => 
+        .addIntegerOption(option =>
             option.setName('break_time')
                 .setDescription('وقت البريك بالدقائق')
                 .setRequired(true))
-        .addIntegerOption(option => 
+        .addIntegerOption(option =>
             option.setName('cycles')
                 .setDescription('عدد الدورات (دراسة + بريك)')
                 .setRequired(true))
@@ -23,8 +23,7 @@ module.exports = {
             option.setName('theme')
                 .setDescription('اختر ثيم التايمر')
                 .setRequired(true);
-            
-            // Dynamic choices with Emojis
+
             Object.keys(timerThemes).forEach(key => {
                 const themeData = timerThemes[key];
                 const choiceName = `${themeData.emoji || '🖼️'} ${themeData.name || key}`;
@@ -32,13 +31,14 @@ module.exports = {
             });
             return option;
         })
-        .addStringOption(option => 
+        .addStringOption(option =>
             option.setName('update_mode')
                 .setDescription('طريقة تحديث التايمر (الاختيار التلقائي: تحديث نفس الرسالة)')
                 .addChoices(
                     { name: 'تحديث نفس الرسالة (Default)', value: 'edit' },
                     { name: 'إرسال رسالة جديدة', value: 'new' }
                 )),
+
     async execute(interaction) {
         const studyTime = interaction.options.getInteger('study_time');
         const breakTime = interaction.options.getInteger('break_time');
@@ -67,70 +67,45 @@ module.exports = {
             starterName: interaction.member.displayName || interaction.user.username,
             studyTime: studyTime * 60,
             breakTime: breakTime * 60,
-            totalTime: studyTime * 60, // Start with study
+            totalTime: studyTime * 60,
             timeLeft: studyTime * 60,
             mode: 'study',
             updateMode: updateMode,
             currentCycle: 1,
             totalCycles: totalCycles,
             themeKey: themeKey,
-            participantNames: {}, 
-            participantAvatars: {}, 
+            participantNames: {},
+            participantAvatars: {},
             messageId: null,
-            interactionToken: interaction.token,
-            startTime: Date.now() // Add precise start time
+            messageObj: null,   // ← stored Message object to avoid interaction token expiry
+            startTime: Date.now()
         };
 
-        // Add current members in VC (EXCLUDING BOTS)
         voiceChannel.members.forEach(member => {
-            if (member.user.bot) return; // Skip Apps/Bots
+            if (member.user.bot) return;
             timerData.participantNames[member.id] = member.displayName || member.user.username;
             timerData.participantAvatars[member.id] = member.user.displayAvatarURL({ extension: 'png', size: 128 });
         });
 
         timerManager.startTimer(voiceChannel.id, timerData);
-        
-        // Initial members tracking (EXCLUDING BOTS)
+
         voiceChannel.members.forEach(member => {
             if (!member.user.bot) timerManager.addParticipant(voiceChannel.id, member.id);
         });
 
-        // 3. Rendering & Loop
-        let lastManualRefresh = 0;
-
-        // Delete all messages in the text channel except the timer message (if exists)
-        const purgeChatExceptTimer = async (timerMessageId) => {
-            try {
-                const messages = await interaction.channel.messages.fetch({ limit: 100 });
-                const toDelete = messages.filter(msg => msg.id !== timerMessageId);
-                if (toDelete.size > 0) {
-                    // bulkDelete only works for messages <14 days old
-                    const deletable = toDelete.filter(msg => Date.now() - msg.createdTimestamp < 14 * 24 * 60 * 60 * 1000);
-                    if (deletable.size > 0) {
-                        await interaction.channel.bulkDelete(deletable, true).catch(() => {});
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to purge chat except timer:', e);
-            }
-        };
-
-        const renderAndSend = async () => {
-            const currentTimer = timerManager.getTimer(voiceChannel.id);
-            if (!currentTimer) return;
-
+        // 3. Build the timer embed + components
+        const buildPayload = async (currentTimer) => {
             const buffer = await drawTimer(currentTimer, theme || {});
             const attachment = new AttachmentBuilder(buffer, { name: 'timer.png' });
-            
-            // Create Premium Embed Wrapper (Purple Theme with Border)
+
             const embed = new EmbedBuilder()
                 .setTitle('⏳ جلسة المذاكرة النشطة')
                 .setDescription(`> جاري المذاكرة والتركيز الآن في <#${voiceChannel.id}>\n> ممنوع الإزعاج 🤫`)
-                .setColor('#673ab7') // Deep Purple Border
+                .setColor('#673ab7')
                 .setImage('attachment://timer.png')
                 .addFields(
                     { name: '👤 المنظم', value: `\`${currentTimer.starterName}\``, inline: true },
-                    { name: '🎭 الثيم', value: `\`${theme.name || 'Default'}\``, inline: true },
+                    { name: '🎭 الثيم', value: `\`${theme?.name || 'Default'}\``, inline: true },
                     { name: '🔄 الجولة', value: `\`${currentTimer.currentCycle}/${currentTimer.totalCycles}\``, inline: true }
                 )
                 .setFooter({ text: 'Antigravity Timer System • بالتوفيق يا بطل!', iconURL: interaction.client.user.displayAvatarURL() })
@@ -143,59 +118,68 @@ module.exports = {
                     .setStyle(ButtonStyle.Danger)
             );
 
-            // Logic: Edit vs New Message (force new occasionally on cycle reset)
-            const isFirstRender = !currentTimer.messageId;
-            const shouldRepost = currentTimer.shouldRepost || currentTimer.updateMode === 'new';
+            return { embeds: [embed], files: [attachment], components: [stopButton] };
+        };
 
-            if (isFirstRender) {
-                const msg = await interaction.editReply({
-                    embeds: [embed],
-                    files: [attachment],
-                    components: [stopButton]
-                });
-                currentTimer.messageId = msg.id;
-                currentTimer.shouldRepost = false;
-            } else if (shouldRepost) {
-                // Delete existing timer message and repost as new at bottom
+        // 4. Render & send/edit the timer message
+        //    — First call: tries interaction.editReply(), falls back to channel.send() if token expired
+        //    — All subsequent calls: message.edit() directly (no 15-min limit)
+        let lastManualRefresh = 0;
+        const renderAndSend = async () => {
+            const currentTimer = timerManager.getTimer(voiceChannel.id);
+            if (!currentTimer) return;
+
+            const payload = await buildPayload(currentTimer);
+
+            if (!currentTimer.messageObj) {
+                // No message yet — try editReply, fall back to channel.send if expired
+                let msg;
                 try {
-                    const oldMsg = await interaction.channel.messages.fetch(currentTimer.messageId);
-                    if (oldMsg) await oldMsg.delete().catch(() => {});
-                } catch (e) {}
+                    msg = await interaction.editReply(payload);
+                } catch (_) {
+                    msg = await interaction.channel.send(payload);
+                }
+                currentTimer.messageObj = msg;
+                currentTimer.messageId = msg.id;
 
-                // Purge other messages from channel (keep one timer message)
-                await purgeChatExceptTimer(currentTimer.messageId);
-
-                const newMsg = await interaction.channel.send({
-                    embeds: [embed],
-                    files: [attachment],
-                    components: [stopButton]
-                });
+            } else if (currentTimer.updateMode === 'new') {
+                // "new" mode — always delete + resend
+                try { await currentTimer.messageObj.delete(); } catch (_) {}
+                const newMsg = await interaction.channel.send(payload);
+                currentTimer.messageObj = newMsg;
                 currentTimer.messageId = newMsg.id;
-                currentTimer.shouldRepost = false;
-                currentTimer.updateMode = 'edit';
+
             } else {
-                await interaction.editReply({
-                    embeds: [embed],
-                    files: [attachment],
-                    components: [stopButton]
-                }).catch(() => {});
+                // Edit mode — use stored Message object (no 15-min expiry)
+                await currentTimer.messageObj.edit(payload).catch(err => {
+                    console.error('Timer message edit failed:', err.message);
+                });
             }
         };
 
-        // Allow external triggers (voiceStateUpdate) to refresh UI
-        timerData.refreshCallback = async () => {
-            const now = Date.now();
-            if (now - lastManualRefresh < 3000) return; // Debounce 3s
-            lastManualRefresh = now;
-            await renderAndSend();
+        // Helper: delete old timer message and resend as a fresh message at the bottom
+        const resendAtBottom = async (timer) => {
+            if (timer.messageObj) {
+                try { await timer.messageObj.delete(); } catch (_) {}
+                timer.messageObj = null;
+                timer.messageId = null;
+            }
+            await renderAndSend().catch(() => {});
         };
 
-        await renderAndSend();
+        // Allow voiceStateUpdate events to trigger a refresh
+        timerData.refreshCallback = async () => {
+            const now = Date.now();
+            if (now - lastManualRefresh < 3000) return;
+            lastManualRefresh = now;
+            await renderAndSend().catch(() => {});
+        };
 
-        // Small delay to ensure first render is complete before starting timer
+        // Initial render
+        await renderAndSend();
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // 4. Tick Interval (Main Loop) - Ticks & refreshes UI every 10 seconds
+        // 5. Main loop — ticks and refreshes every 10 seconds
         const intervalId = setInterval(async () => {
             const timer = timerManager.getTimer(voiceChannel.id);
             if (!timer) {
@@ -203,13 +187,11 @@ module.exports = {
                 return;
             }
 
-            // Advance the timer clock
             timerManager.tick(voiceChannel.id, voiceChannel);
 
-            // Handle state transitions when a phase finishes
             if (timer.status === 'finished') {
                 if (timer.mode === 'study') {
-                    // Reward the top participant
+                    // Reward the top participant of this cycle
                     const sorted = Object.entries(timer.participants)
                         .sort(([, a], [, b]) => b - a);
 
@@ -225,7 +207,7 @@ module.exports = {
                         }
                     }
 
-                    // Transition to break phase
+                    // Transition to break
                     timer.mode = 'break';
                     timer.totalTime = timer.breakTime;
                     timer.timeLeft = timer.breakTime;
@@ -237,11 +219,11 @@ module.exports = {
                         .setColor('#3498DB')
                         .setTimestamp();
                     await interaction.channel.send({ embeds: [breakEmbed] }).catch(() => {});
+                    await resendAtBottom(timer);
 
                 } else {
                     // Break finished
                     if (timer.currentCycle < timer.totalCycles) {
-                        // Move to next study cycle
                         timer.currentCycle++;
                         timer.mode = 'study';
                         timer.totalTime = timer.studyTime;
@@ -254,21 +236,15 @@ module.exports = {
                             .setColor('#E67E22')
                             .setTimestamp();
                         await interaction.channel.send({ embeds: [nextCycleEmbed] }).catch(() => {});
-
-                        // Force repost timer at bottom after break-to-study switch
-                        timer.shouldRepost = true;
-                        await renderAndSend().catch(() => {});
+                        await resendAtBottom(timer);
 
                     } else {
-                        // All cycles done — cleanup and announce
+                        // All cycles complete
                         clearInterval(intervalId);
 
                         try {
-                            if (timer.messageId) {
-                                const msgToDelete = await interaction.channel.messages.fetch(timer.messageId).catch(() => null);
-                                if (msgToDelete) await msgToDelete.delete().catch(() => {});
-                            }
-                        } catch (e) {}
+                            if (timer.messageObj) await timer.messageObj.delete().catch(() => {});
+                        } catch (_) {}
 
                         timerManager.stopTimer(voiceChannel.id);
 
@@ -284,7 +260,7 @@ module.exports = {
             }
 
             // Refresh the timer image every 10 seconds
-            await renderAndSend().catch(err => console.error('Timer render error:', err));
+            await renderAndSend().catch(err => console.error('Timer render error:', err.message));
         }, 10000);
 
         timerData.intervalId = intervalId;
