@@ -40,11 +40,12 @@ module.exports = {
                 }
             }
 
-            // 3. Collect timer message IDs to protect
+            // 3. Collect timer message IDs to protect (check both messageId and messageObj.id)
             const protectedIds = new Set();
-            timerManager.activeTimers.forEach(timer => {
-                if (timer.messageId) protectedIds.add(timer.messageId);
-            });
+            for (const [, timer] of timerManager.activeTimers) {
+                if (timer.messageId)       protectedIds.add(String(timer.messageId));
+                if (timer.messageObj?.id)  protectedIds.add(String(timer.messageObj.id));
+            }
 
             // 4. Fetch messages
             await message.delete().catch(() => {}); // Delete the "مسح" command itself first
