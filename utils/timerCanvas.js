@@ -72,116 +72,109 @@ async function drawTimer(timerData, themeData = {}) {
         .sort(([, timeA], [, timeB]) => timeB - timeA);
 
     const colCount = 3;
-    const itemHeight = 35; // smaller to fit more members
-    const itemWidth = (listWidth - 40) / colCount;
-    const maxItems = 30; // show up to 30 members
+    const itemHeight = 60;
+    const itemWidth = (listWidth - 40) / colCount;   // ≈ 136px per item
+    const maxItems = 24;                              // 3 cols × 8 rows
+    const avatarRadius = 13;                          // smaller to fit 3 cols
 
-    ctx.font = 'bold 13px Cairo';
+    ctx.font = 'bold 14px Cairo';
     for (let i = 0; i < Math.min(sortedParticipants.length, maxItems); i++) {
         const [userId, totalSeconds] = sortedParticipants[i];
         const participantName = timerData.participantNames[userId] || `User ${userId.slice(0, 5)}`;
         const isActive = timerData.currentParticipants.has(userId);
-        const avatarUrl = timerData.participantAvatars && timerData.participantAvatars[userId] 
-            ? timerData.participantAvatars[userId] 
+        const avatarUrl = timerData.participantAvatars && timerData.participantAvatars[userId]
+            ? timerData.participantAvatars[userId]
             : null;
 
         const row = Math.floor(i / colCount);
         const col = i % colCount;
-        
-        const itemX = listX + 20 + col * itemWidth;
+
+        const itemX = listX + 15 + col * itemWidth;
         const itemY = listY + 80 + row * itemHeight;
 
         // --- RANKING & STATUS STYLES ---
-        let borderColor = 'rgba(255, 255, 255, 0.05)'; // Default: None
+        let borderColor = 'rgba(255, 255, 255, 0.05)';
         let pillBg = 'rgba(0, 0, 0, 0.4)';
         let rankIcon = '';
-        
-        // Priority 1: Top 3 Rankings
+
         if (i === 0 && totalSeconds > 0) {
-            borderColor = '#FFD700'; // GOLD
-            pillBg = 'rgba(255, 215, 0, 0.2)'; // Gold tint highlight
+            borderColor = '#FFD700';
+            pillBg = 'rgba(255, 215, 0, 0.2)';
             rankIcon = '🥇';
         } else if (i === 1 && totalSeconds > 0) {
-            borderColor = '#C0C0C0'; // SILVER
+            borderColor = '#C0C0C0';
             pillBg = 'rgba(192, 192, 192, 0.1)';
             rankIcon = '🥈';
         } else if (i === 2 && totalSeconds > 0) {
-            borderColor = '#CD7F32'; // BRONZE
+            borderColor = '#CD7F32';
             pillBg = 'rgba(205, 127, 50, 0.1)';
             rankIcon = '🥉';
         }
-        
-        // Priority 2: Active members (overrides default, but NOT top 3)
-        if (isActive && i > 2) {
-            borderColor = '#2ecc71'; // Bright Green
-        }
+
+        if (isActive && i > 2) borderColor = '#2ecc71';
 
         // Draw the Member "Pill"
         ctx.fillStyle = pillBg;
         ctx.strokeStyle = (isActive || i < 3) ? borderColor : 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = i < 3 ? 2.5 : 2;
-        
-        // Outer Glow for TOP 1
+        ctx.lineWidth = i < 3 ? 2.5 : 1.5;
+
         if (i === 0 && totalSeconds > 0) {
             ctx.shadowBlur = 8;
             ctx.shadowColor = '#FFD700';
         }
-        roundRect(ctx, itemX + 5, itemY, itemWidth - 10, 40, 20, true, true);
+        roundRect(ctx, itemX + 3, itemY, itemWidth - 6, 48, 24, true, true);
         ctx.shadowBlur = 0;
 
-        // Circular Avatar placeholder
+        // Circular Avatar
+        const avatarX = itemX + avatarRadius + 7;
+        const avatarY = itemY + 24;
         ctx.save();
         ctx.beginPath();
-        const avatarX = itemX + 24;
-        const avatarY = itemY + 20;
-        ctx.arc(avatarX, avatarY, 14, 0, Math.PI * 2);
+        ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
         ctx.clip();
-        
+
         let avatarLoaded = false;
         if (avatarUrl) {
             try {
                 const avatarImg = await loadImage(avatarUrl);
-                ctx.drawImage(avatarImg, avatarX - 14, avatarY - 14, 28, 28);
+                ctx.drawImage(avatarImg, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
                 avatarLoaded = true;
             } catch (e) {}
         }
-        
         if (!avatarLoaded) {
             ctx.fillStyle = circleColor;
             ctx.fill();
         }
         ctx.restore();
 
-        // Rank Badge / Crown for #1
+        // Crown for #1 (above pill)
         if (i === 0 && totalSeconds > 0) {
-            ctx.font = '24px Cairo';
+            ctx.font = '16px Cairo';
             ctx.textAlign = 'center';
-            ctx.fillText('👑', itemX - 12, itemY + 28); // Next to the pill
+            ctx.fillText('👑', itemX + 3 + (itemWidth - 6) / 2, itemY - 2);
         }
 
         // Name
         const isTopOne = (i === 0 && totalSeconds > 0);
-        ctx.fillStyle = isTopOne ? '#000000' : '#ffffff';
+        ctx.fillStyle = isTopOne ? '#FFD700' : '#ffffff';
         ctx.textAlign = 'left';
-        ctx.font = 'bold 12px Cairo';
-        const truncatedName = participantName.length > 7 ? participantName.slice(0, 6) + '.' : participantName;
-        ctx.fillText(`${rankIcon} ${truncatedName}`, itemX + 48, itemY + 16);
+        ctx.font = `bold 12px Cairo`;
+        const truncatedName = participantName.length > 6 ? participantName.slice(0, 5) + '..' : participantName;
+        ctx.fillText(`${rankIcon}${truncatedName}`, avatarX + avatarRadius + 3, itemY + 18);
 
-        // Individual Timer
+        // Time
         const pMins = Math.floor(totalSeconds / 60);
         const pSecs = totalSeconds % 60;
-        const pTimeStr = `${pMins}m ${pSecs}s`;
-        ctx.fillStyle = isTopOne ? '#000000' : 'rgba(255, 255, 255, 0.8)';
-        ctx.font = 'italic 10px Cairo';
-        ctx.fillText(pTimeStr, itemX + 48, itemY + 27);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = '10px Cairo';
+        ctx.fillText(`${pMins}m ${pSecs}s`, avatarX + avatarRadius + 3, itemY + 33);
 
-        // Status indicator dot for non-top-3 (if active)
+        // Active dot
         if (isActive && i > 2) {
             ctx.beginPath();
-            ctx.arc(avatarX + 10, avatarY + 10, 4, 0, Math.PI * 2);
+            ctx.arc(avatarX + avatarRadius - 3, avatarY + avatarRadius - 3, 4, 0, Math.PI * 2);
             ctx.fillStyle = '#2ecc71';
             ctx.fill();
-            ctx.stroke();
         }
     }
 
