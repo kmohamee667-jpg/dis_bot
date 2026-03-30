@@ -157,14 +157,20 @@ module.exports = {
             }
         };
 
-        // Helper: delete old timer message and resend as a fresh message at the bottom
+        // Helper: resend timer at the bottom of chat, keeping messageId valid at ALL times
         const resendAtBottom = async (timer) => {
-            if (timer.messageObj) {
-                try { await timer.messageObj.delete(); } catch (_) {}
-                timer.messageObj = null;
-                timer.messageId = null;
-            }
-            await renderAndSend().catch(() => {});
+            const oldObj = timer.messageObj;
+            const currentTimer = timerManager.getTimer(voiceChannel.id);
+            if (!currentTimer) return;
+
+            // Build & send the new message FIRST so messageId is never null/unprotected
+            const payload = await buildPayload(currentTimer);
+            const newMsg = await interaction.channel.send(payload);
+            currentTimer.messageObj = newMsg;
+            currentTimer.messageId = newMsg.id;
+
+            // Delete the old message only AFTER the new one is live
+            if (oldObj) { try { await oldObj.delete(); } catch (_) {} }
         };
 
         // Allow voiceStateUpdate events to trigger a refresh
