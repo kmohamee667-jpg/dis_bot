@@ -1,24 +1,12 @@
 -- ============================================================
--- GALAXY BOT - Supabase Schema
--- Run this file in Supabase SQL Editor to set up all tables
+-- GALAXY BOT - SAFE SCHEMA (RE-RUN FRIENDLY)
 -- ============================================================
 
 -- ============================================================
--- DROP & RECREATE (safe to re-run)
+-- TABLES (SAFE CREATE)
 -- ============================================================
 
-DROP TABLE IF EXISTS timer CASCADE;
-DROP TABLE IF EXISTS galaxy_users CASCADE;
-DROP TABLE IF EXISTS shop_roles CASCADE;
-DROP TABLE IF EXISTS shop_metadata CASCADE;
-DROP TABLE IF EXISTS themes CASCADE;
-DROP TABLE IF EXISTS command_permissions CASCADE;
-
--- ============================================================
--- TABLES
--- ============================================================
-
-CREATE TABLE galaxy_users (
+CREATE TABLE IF NOT EXISTS galaxy_users (
     discord_id         TEXT PRIMARY KEY,
     username           TEXT NOT NULL,
     coins              BIGINT NOT NULL DEFAULT 0,
@@ -27,18 +15,18 @@ CREATE TABLE galaxy_users (
     study_seconds      BIGINT NOT NULL DEFAULT 0
 );
 
-CREATE TABLE shop_roles (
+CREATE TABLE IF NOT EXISTS shop_roles (
     role_id   TEXT PRIMARY KEY,
     role_name TEXT NOT NULL,
     price     INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE shop_metadata (
+CREATE TABLE IF NOT EXISTS shop_metadata (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
 
-CREATE TABLE themes (
+CREATE TABLE IF NOT EXISTS themes (
     theme_key    TEXT PRIMARY KEY,
     name         TEXT NOT NULL,
     emoji        TEXT,
@@ -47,7 +35,7 @@ CREATE TABLE themes (
     circle_color TEXT NOT NULL DEFAULT '#3498db'
 );
 
-CREATE TABLE command_permissions (
+CREATE TABLE IF NOT EXISTS command_permissions (
     id           SERIAL PRIMARY KEY,
     command_name TEXT NOT NULL,
     type         TEXT NOT NULL CHECK (type IN ('role', 'user')),
@@ -80,7 +68,7 @@ CREATE TABLE IF NOT EXISTS timer (
 );
 
 -- ============================================================
--- STORED PROCEDURES (atomic operations)
+-- STORED PROCEDURES (SAFE)
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION add_user_coins(
@@ -123,3 +111,19 @@ BEGIN
             username      = EXCLUDED.username;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- SAFE SEED EXAMPLES (اختياري)
+-- ============================================================
+
+-- مثال: إضافة بيانات بدون تكرار
+-- INSERT INTO shop_metadata (key, value)
+-- VALUES ('shopMessageId', '123')
+-- ON CONFLICT (key) DO NOTHING;
+
+-- مثال: تحديث لو موجود
+-- INSERT INTO shop_roles (role_id, role_name, price)
+-- VALUES ('1', 'VIP', 500)
+-- ON CONFLICT (role_id) DO UPDATE
+-- SET role_name = EXCLUDED.role_name,
+--     price = EXCLUDED.price;

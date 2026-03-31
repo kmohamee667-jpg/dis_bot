@@ -201,21 +201,6 @@ async function deleteTimer(channelId) {
     });
 }
 
-module.exports = {
-    getUser,
-    createUser,
-    updateUserCoins,
-    addCoins,
-    setLastClaimed,
-    batchAddStudyTime,
-    saveTimer,
-    getRunningTimers,
-    getTimer,
-    updateTimerStatus,
-    updateTimerCycle,
-    deleteTimer
-};
-
 async function getStudyTime(userId) {
     const supabase = await getSupabase();
     return await safeQuery(async () => {
@@ -258,6 +243,12 @@ module.exports = {
     addCoins,
     setLastClaimed,
     batchAddStudyTime,
+    saveTimer,
+    getRunningTimers,
+    getTimer,
+    updateTimerStatus,
+    updateTimerCycle,
+    deleteTimer,
     getStudyTime,
     resetAllCoins,
     resetUserCoins
