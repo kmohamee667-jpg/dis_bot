@@ -35,7 +35,7 @@ module.exports = {
 
                 // Auto-delete the denial after 4 seconds — original message stays
                 if (denyMsg) setTimeout(() => denyMsg.delete().catch(() => {}), 4000);
-                return;
+                return; // ✅ توقف تماماً - لا تمسح أي شيء
             }
 
             // 2. Parse count
@@ -55,9 +55,7 @@ module.exports = {
                 if (timer.messageObj?.id)  protectedIds.add(String(timer.messageObj.id));
             }
 
-            // 4. Fetch messages
-            await message.delete().catch(() => {}); // Delete the "مسح" command itself first
-
+            // 5. Fetch messages
             let fetched;
             try {
                 fetched = await message.channel.messages.fetch({ limit: count });
@@ -66,10 +64,10 @@ module.exports = {
                 return;
             }
 
-            // 5. Filter out protected timer messages
+            // 6. Filter out protected timer messages
             const toDelete = fetched.filter(msg => !protectedIds.has(msg.id));
 
-            // 6. Bulk delete (discord only allows messages < 14 days old)
+            // 7. Bulk delete (discord only allows messages < 14 days old)
             let deletedCount = 0;
             try {
                 const bulkDeleted = await message.channel.bulkDelete(toDelete, true); // true = filter old messages
@@ -78,7 +76,7 @@ module.exports = {
                 console.error('[مسح] Bulk delete failed:', e);
             }
 
-            // 7. Send confirmation embed
+            // 8. Send confirmation embed
             const confirmEmbed = new EmbedBuilder()
                 .setTitle('🗑️ تم المسح')
                 .setDescription(`تم مسح **${deletedCount}** رسالة بواسطة ${message.author}`)
@@ -91,7 +89,7 @@ module.exports = {
             // Auto-delete confirmation after 5 seconds
             if (confirmMsg) setTimeout(() => confirmMsg.delete().catch(() => {}), 5000);
 
-            // 8. Log the action
+            // 9. Log the action
             await logAction(client, message.guildId, {
                 title: '🗑️ تنفيذ أمر مسح الرسائل',
                 color: '#9B59B6',
