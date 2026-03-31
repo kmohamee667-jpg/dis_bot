@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Collection } = require('discord.js');
 const { loadPermissions } = require('../utils/configDb');
+const timerManager = require('../utils/timerManager');
 
 module.exports = {
     name: 'clientReady',
@@ -10,6 +11,9 @@ module.exports = {
         console.log(`🟢 Logged in as ${client.user.tag}! Ready on ${client.guilds.cache.size} servers.`);
 
         await loadPermissions();
+
+        // 🔄 استعادة التايمرات من قاعدة البيانات
+        await timerManager.restoreTimersFromDb();
 
         client.commands = new Collection();
         const commandsPath = path.join(__dirname, '../commands');

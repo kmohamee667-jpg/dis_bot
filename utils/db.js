@@ -98,6 +98,124 @@ async function batchAddStudyTime(participantsMap) {
     );
 }
 
+// ============================================================
+// Timer Persistence Functions
+// ============================================================
+
+async function saveTimer(timerData) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('timer')
+            .upsert({
+                channel_id: timerData.channelId,
+                guild_id: timerData.guildId,
+                starter_id: timerData.starterId,
+                starter_name: timerData.starterName,
+                study_time: timerData.studyTime,
+                break_time: timerData.breakTime,
+                cycles: timerData.totalCycles,
+                current_cycle: timerData.currentCycle,
+                theme_key: timerData.themeKey,
+                mode: timerData.mode,
+                update_mode: timerData.updateMode,
+                start_time: timerData.startTime,
+                paused_time: timerData.pausedTime || null,
+                status: timerData.status,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'channel_id', ignoreDuplicates: false })
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    });
+}
+
+async function getRunningTimers() {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('timer')
+            .select('*')
+            .eq('status', 'running');
+        if (error) throw error;
+        return data || [];
+    });
+}
+
+async function getTimer(channelId) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('timer')
+            .select('*')
+            .eq('channel_id', channelId)
+            .single();
+        if (error && error.code === 'PGRST116') return null;
+        if (error) throw error;
+        return data;
+    });
+}
+
+async function updateTimerStatus(channelId, status, pausedTime = null) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const updateData = {
+            status: status,
+            updated_at: new Date().toISOString()
+        };
+        if (pausedTime !== null) {
+            updateData.paused_time = pausedTime;
+        }
+        const { error } = await supabase
+            .from('timer')
+            .update(updateData)
+            .eq('channel_id', channelId);
+        if (error) throw error;
+    });
+}
+
+async function updateTimerCycle(channelId, newCycle, newMode) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { error } = await supabase
+            .from('timer')
+            .update({
+                current_cycle: newCycle,
+                mode: newMode,
+                updated_at: new Date().toISOString()
+            })
+            .eq('channel_id', channelId);
+        if (error) throw error;
+    });
+}
+
+async function deleteTimer(channelId) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { error } = await supabase
+            .from('timer')
+            .delete()
+            .eq('channel_id', channelId);
+        if (error) throw error;
+    });
+}
+
+module.exports = {
+    getUser,
+    createUser,
+    updateUserCoins,
+    addCoins,
+    setLastClaimed,
+    batchAddStudyTime,
+    saveTimer,
+    getRunningTimers,
+    getTimer,
+    updateTimerStatus,
+    updateTimerCycle,
+    deleteTimer
+};
+
 async function getStudyTime(userId) {
     const supabase = await getSupabase();
     return await safeQuery(async () => {

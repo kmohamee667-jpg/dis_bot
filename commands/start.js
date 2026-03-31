@@ -219,6 +219,9 @@ module.exports = {
                     timer.timeLeft = timer.breakTime;
                     timer.status = 'running';
 
+                    // ✅ حفظ التغيير في قاعدة البيانات
+                    await timerManager.updateCycleInDb(voiceChannel.id, timer.currentCycle, 'break');
+
                     const breakEmbed = new EmbedBuilder()
                         .setTitle('🔔 وقت البريك!')
                         .setDescription(`انتهى وقت المذاكرة! حان وقت الراحة الآن لمدة **${breakTime} دقائق**. استمتع ببريكك! ☕`)
@@ -235,6 +238,9 @@ module.exports = {
                         timer.totalTime = timer.studyTime;
                         timer.timeLeft = timer.studyTime;
                         timer.status = 'running';
+
+                        // ✅ حفظ التغيير في قاعدة البيانات
+                        await timerManager.updateCycleInDb(voiceChannel.id, timer.currentCycle, 'study');
 
                         const nextCycleEmbed = new EmbedBuilder()
                             .setTitle('📚 العودة للمذاكرة!')
