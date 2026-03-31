@@ -6,6 +6,12 @@ const timerManager = require('../utils/timerManager');
 module.exports = {
     name: 'messageCreate',
     async execute(message, client) {
+        // ✅ تحقق من Server ID
+        const allowedGuildId = process.env.GUILD_ID;
+        if (allowedGuildId && message.guildId !== allowedGuildId) {
+            return; // تجاهل الرسالة بصمت إذا كانت من سيرفر آخر
+        }
+
         // Ignore bots
         if (message.author.bot) return;
 

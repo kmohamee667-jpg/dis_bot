@@ -4,6 +4,18 @@ const timerManager = require('../utils/timerManager');
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction) {
+        // ✅ تحقق من Server ID
+        const allowedGuildId = process.env.GUILD_ID;
+        if (allowedGuildId && interaction.guildId !== allowedGuildId) {
+            if (interaction.isRepliable()) {
+                return await interaction.reply({
+                    content: '❌ **No Permission to work here!**\nهذا البوت يعمل فقط في السيرفر المخصص له',
+                    flags: [MessageFlags.Ephemeral]
+                }).catch(() => {});
+            }
+            return;
+        }
+
         // --- 1. Chat Input Commands ---
         if (interaction.isChatInputCommand()) {
             const command = interaction.client.commands.get(interaction.commandName);

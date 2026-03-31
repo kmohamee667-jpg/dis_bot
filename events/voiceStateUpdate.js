@@ -3,6 +3,12 @@ const timerManager = require('../utils/timerManager');
 module.exports = {
     name: 'voiceStateUpdate',
     async execute(oldState, newState) {
+        // ✅ تحقق من Server ID
+        const allowedGuildId = process.env.GUILD_ID;
+        if (allowedGuildId && newState.guild.id !== allowedGuildId) {
+            return; // تجاهل إذا كان من سيرفر آخر
+        }
+
         // --- Logic: Detect Participation Changes ---
         
         // 1. User joins or switches to a channel
