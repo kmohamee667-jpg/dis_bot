@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const timerManager = require('../utils/timerManager');
+const { validateGuild } = require('../utils/guildValidator');
 const { drawTimer } = require('../utils/timerCanvas');
 const timerThemes = require('../data/themes.json');
 
@@ -40,6 +41,9 @@ module.exports = {
                 )),
 
     async execute(interaction) {
+        // ✅ التحقق من Guild ID
+        if (!await validateGuild(interaction)) return;
+
         const studyTime = interaction.options.getInteger('study_time');
         const breakTime = interaction.options.getInteger('break_time');
         const totalCycles = interaction.options.getInteger('cycles');

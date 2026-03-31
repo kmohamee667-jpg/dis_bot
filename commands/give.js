@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const db = require('../utils/db');
+const { validateGuild } = require('../utils/guildValidator');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
 
@@ -25,6 +26,9 @@ module.exports = {
         .addUserOption(option => option.setName('user4').setDescription('المستخدم الرابع'))
         .addUserOption(option => option.setName('user5').setDescription('المستخدم الخامس')),
     async execute(interaction) {
+        // ✅ التحقق من Guild ID
+        if (!await validateGuild(interaction)) return;
+
         if (!isAdmin(interaction, 'give')) {
             return await interaction.reply({
                 content: '❌ You don\'t have permission to use this command.',

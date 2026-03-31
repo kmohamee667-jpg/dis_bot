@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { validateGuild } = require('../utils/guildValidator');
 const db = require('../utils/db');
 
 module.exports = {
@@ -6,6 +7,9 @@ module.exports = {
         .setName('daily')
         .setDescription('احصل على جائزتك اليومية من الكوينات (كل 24 ساعة).'),
     async execute(interaction) {
+        // ✅ التحقق من Guild ID
+        if (!await validateGuild(interaction)) return;
+
         const userId = interaction.user.id;
         let user = await db.getUser(userId);
 

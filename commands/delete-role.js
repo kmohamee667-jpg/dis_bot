@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const shopDb = require('../utils/shopDb');
+const { validateGuild } = require('../utils/guildValidator');
 const { isAdmin } = require('../utils/admin-check');
 
 module.exports = {
@@ -9,6 +10,9 @@ module.exports = {
         .addRoleOption(option =>
             option.setName('role').setDescription('الرتبة المراد حذفها').setRequired(true)),
     async execute(interaction) {
+        // ✅ التحقق من Guild ID
+        if (!await validateGuild(interaction)) return;
+
         if (!isAdmin(interaction, 'delete-role')) {
             return await interaction.reply({ content: '❌ You don\'t have permission to use this command.', flags: [MessageFlags.Ephemeral] });
         }

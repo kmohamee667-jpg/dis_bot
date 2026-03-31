@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const timerManager = require('../utils/timerManager');
+const { validateGuild } = require('../utils/guildValidator');
 const { drawTimer } = require('../utils/timerCanvas');
 const timerThemes = require('../data/themes.json');
 const { isAdmin } = require('../utils/admin-check');
@@ -77,6 +78,9 @@ module.exports = {
 
 
     async execute(interaction) {
+        // ✅ التحقق من Guild ID
+        if (!await validateGuild(interaction)) return;
+
         if (!isAdmin(interaction, 'challenge')) {
             return await interaction.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.', flags: [MessageFlags.Ephemeral] });
         }

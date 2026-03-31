@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const db = require('../utils/db');
+const { validateGuild } = require('../utils/guildValidator');
 const path = require('path');
 
 try {
@@ -32,6 +33,9 @@ module.exports = {
                 .setDescription('المستخدم المراد عرض رصيده (للمسؤولين فقط)')
                 .setRequired(false)),
     async execute(interaction) {
+        // ✅ التحقق من Guild ID
+        if (!await validateGuild(interaction)) return;
+
         await interaction.deferReply();
 
         try {

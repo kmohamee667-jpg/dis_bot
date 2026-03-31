@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, MessageFlags, AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const shopDb = require('../utils/shopDb');
+const { validateGuild } = require('../utils/guildValidator');
 const { renderShop } = require('../utils/shopUI');
 const { isAdmin } = require('../utils/admin-check');
 const path = require('path');
@@ -13,6 +14,9 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand.setName('setup').setDescription('إعداد متجر دائم في هذه القناة (للمسؤولين فقط)')),
     async execute(interaction) {
+        // ✅ التحقق من Guild ID
+        if (!await validateGuild(interaction)) return;
+
         const subcommand = interaction.options.getSubcommand();
 
         if (subcommand === 'setup') {

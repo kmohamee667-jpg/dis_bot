@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const timerManager = require('../utils/timerManager');
+const { validateGuild } = require('../utils/guildValidator');
 const { isAdmin } = require('../utils/admin-check');
 
 module.exports = {
@@ -9,6 +10,9 @@ module.exports = {
         .setDMPermission(false),
 
     async execute(interaction) {
+        // ✅ التحقق من Guild ID
+        if (!await validateGuild(interaction)) return;
+
         if (!isAdmin(interaction, 'top-time')) {
             return await interaction.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.', flags: [MessageFlags.Ephemeral] });
         }
