@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, MessageFlags } = require('discord.js');
 const { isAdmin } = require('../utils/admin-check');
 const { logAction } = require('../utils/logger');
 const timerManager = require('../utils/timerManager');
@@ -6,19 +6,22 @@ const timerManager = require('../utils/timerManager');
 module.exports = {
     name: 'messageCreate',
     async execute(message, client) {
-        // ✅ تحقق من Server ID
-        const allowedGuildId = process.env.GUILD_ID;
-        if (allowedGuildId && message.guildId !== allowedGuildId) {
-            return; // تجاهل الرسالة بصمت إذا كانت من سيرفر آخر
-        }
-
         // Ignore bots
         if (message.author.bot) return;
 
+        const allowedGuildId = process.env.GUILD_ID;
         const content = message.content.trim();
 
         // ─── Keyword: مسح ──────────────────────────────────────────────
         if (content === 'مسح' || content.startsWith('مسح ')) {
+            
+            // ✅ تحقق من Server ID - اجبر استخدام السيرفر المحدد فقط
+            if (allowedGuildId && message.guildId !== allowedGuildId) {
+                return await message.reply({
+                    content: '❌ **No Permission to work here!**\nهذا الأمر يعمل فقط في السيرفر المخصص',
+                    flags: [MessageFlags.Ephemeral]
+                }).catch(() => {});
+            }
 
             // 1. Permission check
             if (!isAdmin(message, 'مسح')) {
