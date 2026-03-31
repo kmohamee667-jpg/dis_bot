@@ -24,9 +24,8 @@ module.exports = {
                     ]
                 }).catch(() => null);
 
-                // Auto-delete the denial after 4 seconds
+                // Auto-delete the denial after 4 seconds — original message stays
                 if (denyMsg) setTimeout(() => denyMsg.delete().catch(() => {}), 4000);
-                message.delete().catch(() => {});
                 return;
             }
 

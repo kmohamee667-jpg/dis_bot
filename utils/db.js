@@ -1,120 +1,143 @@
-const fs = require('fs');
-const path = require('path');
+const { getSupabase, safeQuery } = require('./supabase');
 
-const dataDir = path.join(__dirname, '../data');
-const usersPath = path.join(dataDir, 'users.json');
-
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+async function getUser(userId) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('galaxy_users')
+            .select('*')
+            .eq('discord_id', userId)
+            .single();
+        if (error && error.code === 'PGRST116') return null;
+        if (error) throw error;
+        return data;
+    });
 }
 
-function readUsers() {
-    if (!fs.existsSync(usersPath)) {
-        fs.writeFileSync(usersPath, JSON.stringify({}, null, 4));
-    }
-    try {
-        return JSON.parse(fs.readFileSync(usersPath, 'utf8'));
-    } catch (e) {
-        return {};
-    }
+async function createUser(userId, username, initialCoins = 0) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('galaxy_users')
+            .upsert({
+                discord_id: userId,
+                username,
+                coins: initialCoins,
+                last_added: initialCoins > 0 ? new Date().toISOString() : null,
+                daily_last_claimed: null,
+                study_seconds: 0
+            }, { onConflict: 'discord_id', ignoreDuplicates: false })
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    });
 }
 
-function writeUsers(data) {
-    fs.writeFileSync(usersPath, JSON.stringify(data, null, 4));
-}
+async function updateUserCoins(userId, username, newCoins, updateLastAdded = false) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data: existing } = await supabase
+            .from('galaxy_users')
+            .select('coins')
+            .eq('discord_id', userId)
+            .single();
 
-function getUser(userId) {
-    const users = readUsers();
-    return users[userId] || null;
-}
-
-function createUser(userId, username, initialCoins = 0) {
-    const users = readUsers();
-    users[userId] = {
-        username: username,
-        coins: initialCoins,
-        lastAdded: initialCoins > 0 ? new Date().toISOString() : null,
-        dailyLastClaimed: null,
-        studySeconds: 0
-    };
-    writeUsers(users);
-    return users[userId];
-}
-
-function updateUserCoins(userId, username, newCoins, updateLastAdded = false) {
-    const users = readUsers();
-    if (!users[userId]) {
-        users[userId] = { username, coins: 0, lastAdded: null, dailyLastClaimed: null, studySeconds: 0 };
-    } else {
-        users[userId].username = username;
-        // Migrate old users missing studySeconds
-        if (typeof users[userId].studySeconds !== 'number') {
-            users[userId].studySeconds = 0;
+        const updateData = { discord_id: userId, username, coins: newCoins };
+        if (updateLastAdded && (!existing || newCoins > (existing.coins || 0))) {
+            updateData.last_added = new Date().toISOString();
         }
-    }
 
-    if (updateLastAdded && newCoins > users[userId].coins) {
-        users[userId].lastAdded = new Date().toISOString();
-    }
-
-    users[userId].coins = newCoins;
-    writeUsers(users);
-    return users[userId];
+        const { data, error } = await supabase
+            .from('galaxy_users')
+            .upsert(updateData, { onConflict: 'discord_id', ignoreDuplicates: false })
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    });
 }
 
-function setLastClaimed(userId) {
-    const users = readUsers();
-    if (users[userId]) {
-        users[userId].dailyLastClaimed = new Date().toISOString();
-        writeUsers(users);
-    }
+async function addCoins(userId, username, amount, updateLastAdded = false) {
+    const supabase = await getSupabase();
+    await safeQuery(async () => {
+        const { error } = await supabase.rpc('add_user_coins', {
+            p_discord_id: userId,
+            p_username: username,
+            p_amount: amount,
+            p_update_last_added: updateLastAdded
+        });
+        if (error) throw error;
+    });
 }
 
-/**
- * Add study time (seconds) for multiple participants in one atomic write.
- * participantsMap: { userId: { username, seconds } }
- */
-function batchAddStudyTime(participantsMap) {
-    const users = readUsers();
-    for (const [userId, { username, seconds }] of Object.entries(participantsMap)) {
-        if (!users[userId]) {
-            users[userId] = { username, coins: 0, lastAdded: null, dailyLastClaimed: null, studySeconds: 0 };
-        } else {
-            users[userId].username = username;
-            if (typeof users[userId].studySeconds !== 'number') {
-                users[userId].studySeconds = 0;
-            }
-        }
-        users[userId].studySeconds += seconds;
-    }
-    writeUsers(users);
+async function setLastClaimed(userId) {
+    const supabase = await getSupabase();
+    await safeQuery(async () => {
+        const { error } = await supabase
+            .from('galaxy_users')
+            .update({ daily_last_claimed: new Date().toISOString() })
+            .eq('discord_id', userId);
+        if (error) throw error;
+    });
 }
 
-function getStudyTime(userId) {
-    const users = readUsers();
-    return users[userId]?.studySeconds || 0;
+async function batchAddStudyTime(participantsMap) {
+    const supabase = await getSupabase();
+    await Promise.all(
+        Object.entries(participantsMap).map(([userId, { username, seconds }]) =>
+            safeQuery(async () => {
+                const { error } = await supabase.rpc('add_study_seconds', {
+                    p_discord_id: userId,
+                    p_username: username,
+                    p_seconds: seconds
+                });
+                if (error) throw error;
+            })
+        )
+    );
 }
 
-function resetAllCoins() {
-    const users = readUsers();
-    for (const userId in users) {
-        users[userId].coins = 0;
-    }
-    writeUsers(users);
+async function getStudyTime(userId) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('galaxy_users')
+            .select('study_seconds')
+            .eq('discord_id', userId)
+            .single();
+        if (error) return 0;
+        return data?.study_seconds || 0;
+    });
 }
 
-function resetUserCoins(userId) {
-    const users = readUsers();
-    if (users[userId]) {
-        users[userId].coins = 0;
-        writeUsers(users);
-    }
+async function resetAllCoins() {
+    const supabase = await getSupabase();
+    await safeQuery(async () => {
+        const { error } = await supabase
+            .from('galaxy_users')
+            .update({ coins: 0 })
+            .gte('coins', 0);
+        if (error) throw error;
+    });
+}
+
+async function resetUserCoins(userId) {
+    const supabase = await getSupabase();
+    await safeQuery(async () => {
+        const { error } = await supabase
+            .from('galaxy_users')
+            .update({ coins: 0 })
+            .eq('discord_id', userId);
+        if (error) throw error;
+    });
 }
 
 module.exports = {
     getUser,
     createUser,
     updateUserCoins,
+    addCoins,
     setLastClaimed,
     batchAddStudyTime,
     getStudyTime,

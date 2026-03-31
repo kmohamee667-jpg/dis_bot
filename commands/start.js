@@ -193,7 +193,7 @@ module.exports = {
                 return;
             }
 
-            timerManager.tick(voiceChannel.id, voiceChannel);
+            await timerManager.tick(voiceChannel.id, voiceChannel);
 
             if (timer.status === 'finished') {
                 if (timer.mode === 'study') {

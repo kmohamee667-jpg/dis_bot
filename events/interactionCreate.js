@@ -12,11 +12,10 @@ module.exports = {
             try {
                 await command.execute(interaction);
 
-                // --- 🚩 Automatic Command Logging ---
                 const { logAction } = require('../utils/logger');
                 const options = interaction.options.data.map(opt => {
                     let val = opt.value;
-                    if (opt.type === 6 && opt.user) val = `${opt.user.tag} (${opt.user.id})`; 
+                    if (opt.type === 6 && opt.user) val = `${opt.user.tag} (${opt.user.id})`;
                     if (opt.type === 8 && opt.role) val = `${opt.role.name} (${opt.role.id})`;
                     if (opt.type === 7 && opt.channel) val = `${opt.channel.name} (${opt.channel.id})`;
                     return `• **${opt.name}:** \`${val}\``;
@@ -32,7 +31,6 @@ module.exports = {
                         { name: 'التفاصيل', value: options, inline: false }
                     ]
                 });
-                // -----------------------------------
             } catch (error) {
                 if (error.code === 10062 || error.code === 40060) return;
                 console.error('Interaction error:', error);
@@ -47,10 +45,9 @@ module.exports = {
 
         // --- 2. Modal Submissions ---
         else if (interaction.isModalSubmit()) {
-            // --- 🚩 Automatic Modal Logging ---
             const { logAction } = require('../utils/logger');
             const modalFields = interaction.fields.fields.map(f => `• **${f.customId}:** \`${f.value}\``).join('\n') || '*لا يوجد خيارات*';
-            
+
             await logAction(interaction.client, interaction.guildId, {
                 title: '📝 إرسال نموذج (Modal)',
                 color: '#9B59B6',
@@ -61,12 +58,10 @@ module.exports = {
                     { name: 'البيانات المرسلة', value: modalFields, inline: false }
                 ]
             });
-            // ---------------------------------
         }
 
         // --- 3. Button Interactions ---
         else if (interaction.isButton()) {
-            // --- 🚩 Automatic Button Logging ---
             const { logAction } = require('../utils/logger');
             await logAction(interaction.client, interaction.guildId, {
                 title: '🔘 ضغطة زرار (Button)',
@@ -77,15 +72,13 @@ module.exports = {
                     { name: 'القناة', value: `<#${interaction.channelId}>`, inline: true }
                 ]
             });
-            // -----------------------------------
 
             const shopDb = require('../utils/shopDb');
             const db = require('../utils/db');
-const timerManager = require('../utils/timerManager');
             const { renderShop } = require('../utils/shopUI');
-            const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-            const { shopMessageId } = shopDb.getMetadata();
+            const metadata = await shopDb.getMetadata();
+            const shopMessageId = metadata.shopMessageId;
             const isPublic = interaction.message.id === shopMessageId;
 
             // Pagination Handling
@@ -101,23 +94,22 @@ const timerManager = require('../utils/timerManager');
             // Buy Role Initiation
             else if (interaction.customId.startsWith('buy_role_')) {
                 const roleId = interaction.customId.replace('buy_role_', '');
-                const roleData = shopDb.getRole(roleId);
+                const roleData = await shopDb.getRole(roleId);
 
                 if (!roleData) {
                     return await interaction.reply({ content: '❌ عذراً، هذه الرتبة لم تعد موجودة في المتجر.', flags: [MessageFlags.Ephemeral] });
                 }
 
                 if (!interaction.member || (!interaction.member.roles && interaction.guildId)) {
-                    // محاولة جلب العضو إذا كان البيانت ناقصة
                     const guild = interaction.guild || await interaction.client.guilds.fetch(interaction.guildId).catch(() => null);
                     if (guild) await guild.members.fetch(interaction.user.id).catch(() => null);
                 }
 
                 if (interaction.member && interaction.member.roles) {
-                    const hasRole = interaction.member.roles.cache 
+                    const hasRole = interaction.member.roles.cache
                         ? interaction.member.roles.cache.has(roleId)
                         : (Array.isArray(interaction.member.roles) && interaction.member.roles.includes(roleId));
-                    
+
                     if (hasRole) {
                         return await interaction.reply({ content: '⚠️ أنت تمتلك هذه الرتبة بالفعل!', flags: [MessageFlags.Ephemeral] });
                     }
@@ -129,14 +121,8 @@ const timerManager = require('../utils/timerManager');
                     .setColor('#FFD700');
 
                 const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`confirm_buy_${roleId}`)
-                        .setLabel('تأكيد الشراء')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId('cancel_buy')
-                        .setLabel('إلغاء')
-                        .setStyle(ButtonStyle.Danger)
+                    new ButtonBuilder().setCustomId(`confirm_buy_${roleId}`).setLabel('تأكيد الشراء').setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId('cancel_buy').setLabel('إلغاء').setStyle(ButtonStyle.Danger)
                 );
 
                 await interaction.reply({ embeds: [confirmEmbed], components: [row], flags: [MessageFlags.Ephemeral] });
@@ -151,7 +137,7 @@ const timerManager = require('../utils/timerManager');
             else if (interaction.customId.startsWith('timer_stop_')) {
                 const channelId = interaction.customId.replace('timer_stop_', '');
                 const timer = timerManager.getTimer(channelId);
-                
+
                 try {
                     if (!timer) {
                         if (interaction.isRepliable()) {
@@ -160,7 +146,6 @@ const timerManager = require('../utils/timerManager');
                         return;
                     }
 
-                    // Allow: the starter OR anyone with 'timer-stop' permission
                     const { isAdmin } = require('../utils/admin-check');
                     const isStarter = interaction.user.id === timer.starterId;
                     const hasStopPerm = isAdmin(interaction, 'timer-stop');
@@ -172,7 +157,6 @@ const timerManager = require('../utils/timerManager');
                         return;
                     }
 
-                    // Acknowledge the interaction first to prevent Unknown Interaction error
                     if (interaction.isRepliable()) {
                         await interaction.deferUpdate().catch(() => {});
                     }
@@ -180,7 +164,6 @@ const timerManager = require('../utils/timerManager');
                     timerManager.stopTimer(channelId);
                     if (timer.intervalId) clearInterval(timer.intervalId);
 
-                    // --- NEW: Delete the timer message immediately ---
                     if (timer.messageId) {
                         try {
                             const msgToDelete = await interaction.channel.messages.fetch(timer.messageId).catch(() => null);
@@ -233,14 +216,12 @@ const timerManager = require('../utils/timerManager');
                 timer.timeLeft = timer.studyTime;
                 timer.cycleParticipants = {};
 
-                // Delete the continue button message after use
                 if (timer.continueMessageId) {
                     const contMsg = await interaction.channel.messages.fetch(timer.continueMessageId).catch(() => null);
                     if (contMsg) await contMsg.delete().catch(() => {});
                     timer.continueMessageId = null;
                 }
 
-                // Recreate timer UI message so old button-containing message is removed
                 if (timer.messageId) {
                     const oldTimerMsg = await interaction.channel.messages.fetch(timer.messageId).catch(() => null);
                     if (oldTimerMsg) await oldTimerMsg.delete().catch(() => {});
@@ -256,8 +237,14 @@ const timerManager = require('../utils/timerManager');
             // Confirm Purchase
             else if (interaction.customId.startsWith('confirm_buy_')) {
                 const roleId = interaction.customId.replace('confirm_buy_', '');
-                const roleData = shopDb.getRole(roleId);
-                const user = db.getUser(interaction.user.id) || db.createUser(interaction.user.id, interaction.user.username, 0);
+
+                const [roleData, userData] = await Promise.all([
+                    shopDb.getRole(roleId),
+                    db.getUser(interaction.user.id)
+                ]);
+
+                let user = userData;
+                if (!user) user = await db.createUser(interaction.user.id, interaction.user.username, 0);
 
                 if (!roleData) {
                     return await interaction.update({ content: '❌ عذراً، الرتبة لم تعد متاحة.', embeds: [], components: [] });
@@ -280,24 +267,23 @@ const timerManager = require('../utils/timerManager');
                     }
 
                     if (!member || !member.roles) {
-                         throw new Error('Member roles not available');
+                        throw new Error('Member roles not available');
                     }
                     await member.roles.add(role);
                     const newBalance = user.coins - roleData.price;
-                    db.updateUserCoins(interaction.user.id, interaction.user.username, newBalance);
+                    await db.updateUserCoins(interaction.user.id, interaction.user.username, newBalance);
 
                     await interaction.update({ content: `🎉 مبروك! لقد اشتريت رتبة **${role.name}** بنجاح وتم خصم الكوينات من رصيدك.`, embeds: [], components: [] });
 
-                    // تسجيل عملية الشراء في اللوج المركزي
                     const { logAction } = require('../utils/logger');
                     await logAction(interaction.client, interaction.guildId, {
                         title: '🛒 عملية شراء رتبة',
                         color: '#4ee44e',
                         user: interaction.user,
                         fields: [
-                        { name: '👤 المشتري', value: `${interaction.user.username} (${interaction.user.id})`, inline: true },
-                        { name: '🎖️ الرتبة', value: role.name, inline: true },
-                        { name: '💰 السعر', value: `\`${(roleData.price || 0).toLocaleString()}\` كوين`, inline: true }
+                            { name: '👤 المشتري', value: `${interaction.user.username} (${interaction.user.id})`, inline: true },
+                            { name: '🎖️ الرتبة', value: role.name, inline: true },
+                            { name: '💰 السعر', value: `\`${(roleData.price || 0).toLocaleString()}\` كوين`, inline: true }
                         ]
                     });
                 } catch (err) {
@@ -308,10 +294,3 @@ const timerManager = require('../utils/timerManager');
         }
     },
 };
-
-
-
-
-
-
-

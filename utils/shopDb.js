@@ -1,78 +1,92 @@
-const fs = require('fs');
-const path = require('path');
+const { getSupabase, safeQuery } = require('./supabase');
 
-const dataDir = path.join(__dirname, '../data');
-const shopPath = path.join(dataDir, 'shop.json');
-
-// Ensure data directory exists
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+async function getRoles() {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('shop_roles')
+            .select('*')
+            .order('role_name');
+        if (error) throw error;
+        return data.map(r => ({ id: r.role_id, name: r.role_name, price: r.price }));
+    }) || [];
 }
 
-function readShop() {
-    if (!fs.existsSync(shopPath)) {
-        fs.writeFileSync(shopPath, JSON.stringify({ roles: [], metadata: {} }, null, 4));
-    }
-    try {
-        const data = JSON.parse(fs.readFileSync(shopPath, 'utf8'));
-        if (!data.metadata) data.metadata = {};
-        return data;
-    } catch (e) {
-        return { roles: [], metadata: {} };
-    }
+async function getRole(roleId) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('shop_roles')
+            .select('*')
+            .eq('role_id', roleId)
+            .single();
+        if (error && error.code === 'PGRST116') return null;
+        if (error) throw error;
+        return { id: data.role_id, name: data.role_name, price: data.price };
+    });
 }
 
-function writeShop(data) {
-    fs.writeFileSync(shopPath, JSON.stringify(data, null, 4));
+async function addRole(roleId, roleName, price) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { error } = await supabase
+            .from('shop_roles')
+            .insert({ role_id: roleId, role_name: roleName, price });
+        if (error) {
+            if (error.code === '23505') return false;
+            throw error;
+        }
+        return true;
+    });
 }
 
-function getMetadata() {
-    return readShop().metadata;
-}
-
-function updateMetadata(metadata) {
-    const data = readShop();
-    data.metadata = { ...data.metadata, ...metadata };
-    writeShop(data);
-}
-
-function getRoles() {
-    return readShop().roles;
-}
-
-function addRole(roleId, roleName, price) {
-    const data = readShop();
-    if (!data.roles) data.roles = [];
-    
-    if (data.roles.find(r => r.id === roleId)) {
-        return false;
-    }
-    
-    data.roles.push({ id: roleId, name: roleName, price: price });
-    writeShop(data);
+async function deleteRole(roleId) {
+    const supabase = await getSupabase();
+    await safeQuery(async () => {
+        const { error } = await supabase
+            .from('shop_roles')
+            .delete()
+            .eq('role_id', roleId);
+        if (error) throw error;
+    });
     return true;
 }
 
-function deleteRole(roleId) {
-    const data = readShop();
-    data.roles = data.roles.filter(r => r.id !== roleId);
-    writeShop(data);
-    return true;
+async function updateRolePrice(roleId, newPrice) {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('shop_roles')
+            .update({ price: newPrice })
+            .eq('role_id', roleId)
+            .select();
+        if (error) throw error;
+        return data && data.length > 0;
+    });
 }
 
-function updateRolePrice(roleId, newPrice) {
-    const data = readShop();
-    const role = data.roles.find(r => r.id === roleId);
-    if (!role) return false;
-    
-    role.price = newPrice;
-    writeShop(data);
-    return true;
+async function getMetadata() {
+    const supabase = await getSupabase();
+    return await safeQuery(async () => {
+        const { data, error } = await supabase
+            .from('shop_metadata')
+            .select('*');
+        if (error) throw error;
+        const result = {};
+        for (const row of data) result[row.key] = row.value;
+        return result;
+    }) || {};
 }
 
-function getRole(roleId) {
-    const data = readShop();
-    return data.roles.find(r => r.id === roleId) || null;
+async function updateMetadata(metadata) {
+    const supabase = await getSupabase();
+    await safeQuery(async () => {
+        const rows = Object.entries(metadata).map(([key, value]) => ({ key, value }));
+        const { error } = await supabase
+            .from('shop_metadata')
+            .upsert(rows, { onConflict: 'key' });
+        if (error) throw error;
+    });
 }
 
 module.exports = { getRoles, addRole, deleteRole, getRole, getMetadata, updateMetadata, updateRolePrice };
