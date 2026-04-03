@@ -49,13 +49,30 @@ async function getTheme(themeKey) {
 /**
  * Get all theme choices for slash command
  */
+let themeChoicesCache = null;
+
+function getThemeChoicesSync() {
+    if (!themeChoicesCache) {
+        // Fallback static themes if DB empty
+        themeChoicesCache = [
+            { name: '🌃 Neon Night', value: 'neon' },
+            { name: '🌿 Nature Forest', value: 'nature' },
+            { name: '☁️ Minimalist', value: 'minimal' },
+            { name: '⚔️ Toji', value: 'Toje' },
+            { name: '🌌 Galaxy', value: 'Galaxy' }
+        ];
+    }
+    return themeChoicesCache;
+}
+
 async function getThemeChoices() {
-    const themes = await loadThemes();
-    return Object.entries(themes).map(([key, data]) => ({
+    await loadThemes();
+    themeChoicesCache = Object.entries(themesCache).map(([key, data]) => ({
         name: `${data.emoji || '🖼️'} ${data.name}`,
         value: key
     }));
+    return themeChoicesCache;
 }
 
-module.exports = { loadThemes, getTheme, getThemeChoices };
+module.exports = { loadThemes, getTheme, getThemeChoices, getThemeChoicesSync };
 

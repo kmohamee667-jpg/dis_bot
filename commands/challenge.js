@@ -64,9 +64,9 @@ module.exports = {
         .addIntegerOption(option => option.setName('study_time').setDescription('وقت الدراسة بالدقائق').setRequired(true))
         .addIntegerOption(option => option.setName('break_time').setDescription('وقت البريك بالدقائق').setRequired(true))
         .addIntegerOption(option => option.setName('cycles').setDescription('عدد الدورات (دراسة + بريك)').setRequired(true))
-        .addStringOption(async option => {
+        .addStringOption(option => {
             option.setName('theme').setDescription('اختر ثيم التايمر').setRequired(true);
-            const choices = await getThemeChoices();
+            const choices = require('../utils/themesDb').getThemeChoicesSync();
             choices.forEach(choice => option.addChoices(choice));
             return option;
         })

@@ -20,11 +20,11 @@ module.exports = {
             option.setName('cycles')
                 .setDescription('عدد الدورات (دراسة + بريك)')
                 .setRequired(true))
-        .addStringOption(async option => {
+        .addStringOption(option => {
             option.setName('theme')
                 .setDescription('اختر ثيم التايمر')
                 .setRequired(true);
-            const choices = await getThemeChoices();
+            const choices = require('../utils/themesDb').getThemeChoicesSync();
             choices.forEach(choice => option.addChoices(choice));
             return option;
         })
@@ -45,7 +45,9 @@ module.exports = {
         const totalCycles = interaction.options.getInteger('cycles');
         const themeKey = interaction.options.getString('theme');
         const updateMode = interaction.options.getString('update_mode') || 'edit';
-        const theme = timerThemes[themeKey];
+        const themeDb = require('../utils/themesDb');
+        const theme = await themeDb.getTheme(themeKey) || {};
+
 
         // 1. Validation
         const voiceChannel = interaction.member.voice.channel;
