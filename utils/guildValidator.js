@@ -6,7 +6,9 @@ const { EmbedBuilder, MessageFlags } = require('discord.js');
  * @returns {boolean} true إذا كان Guild ID صحيح
  */
 async function validateGuild(interaction) {
-    const allowedGuildId = process.env.GUILD_ID;
+    const allowedGuildIdsStr = process.env.GUILD_IDS || process.env.GUILD_ID || '';
+    const allowedGuildIds = allowedGuildIdsStr.split(',').map(id => id.trim()).filter(Boolean);
+
     const currentGuildId = interaction.guildId;
 
     // ❌ لا guild ID
@@ -20,12 +22,12 @@ async function validateGuild(interaction) {
         return false;
     }
 
-    // ❌ Guild ID غير متطابق
-    if (allowedGuildId && currentGuildId !== allowedGuildId) {
+    // ❌ Not in allowed guilds
+    if (!allowedGuildIds.includes(currentGuildId)) {
         if (interaction.isRepliable?.()) {
             const embed = new EmbedBuilder()
-                .setDescription('❌ **No Permission to work here!**\nهذا البوت يعمل فقط في السيرفر المخصص')
-                .setColor('#FF8C00'); // برتقالي
+                .setDescription(`❌ **No Permission!**\nالسيرفر غير مصرح له\nالسيرفرات: ${allowedGuildIds.join(', ')}`)
+                .setColor('#FF8C00');
             
             await interaction.reply({
                 embeds: [embed],

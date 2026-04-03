@@ -281,12 +281,7 @@ module.exports = {
                             .setTimestamp();
                         await interaction.channel.send({ embeds: [finishedEmbed], files: [leaderboardAttachment] }).catch(() => {});
 
-                        const textEmbed = new EmbedBuilder()
-                            .setTitle('🏆 تم الإنجاز!')
-                            .setDescription(`مبروك! تم الانتهاء من جميع الدورات (**${totalCycles} دورات**). فخورين بك وبمجهودك! اذهب وخذ قسطاً من الراحة. ❤️`)
-                            .setColor('#2ECC71')
-                            .setTimestamp();
-                        await interaction.channel.send({ embeds: [textEmbed] }).catch(() => {});
+                        // REMOVED: Final "تم الإنجاز" message
                         return;
                     }
                 }
