@@ -242,7 +242,7 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
     if (stroke) ctx.stroke();
 }
 
-async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = null) {
+async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = null, themeData = {}) {
     // Responsive height
     const width = 1200;
     const baseHeight = 950;
@@ -251,24 +251,36 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Background
-    ctx.fillStyle = '#0f0f1f';
-    ctx.fillRect(0, 0, width, height);
+    // Background with theme image
+    const bgPath = themeData && themeData.path ? path.join(__dirname, '../', themeData.path) : null;
+    
+    if (bgPath) {
+        try {
+            const bg = await loadImage(bgPath);
+            const hRatio = canvas.width / bg.width;
+            const vRatio = canvas.height / bg.height;
+            const ratio = Math.max(hRatio, vRatio);
+            const centerShiftX = (canvas.width - bg.width * ratio) / 2;
+            const centerShiftY = (canvas.height - bg.height * ratio) / 2;
+            ctx.drawImage(bg, 0, 0, bg.width, bg.height, centerShiftX, centerShiftY, bg.width * ratio, bg.height * ratio);
+        } catch (e) {
+            ctx.fillStyle = '#0f0f1f';
+            ctx.fillRect(0, 0, width, height);
+        }
+    } else {
+        ctx.fillStyle = '#0f0f1f';
+        ctx.fillRect(0, 0, width, height);
+    }
+    
+    // Add Dark overlay for readability
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(0, 0, width, height);
 
-    // Title
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 48px Cairo';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🏆 Leaderboard - أكثر وقت دراسة', width / 2, 60);
-
     // ===== TOP 3 CONTAINER =====
     const topContainerX = 50;
-    const topContainerY = 120;
+    const topContainerY = 50;
     const topContainerWidth = width - 100;
-    const topContainerHeight = 320;
+    const topContainerHeight = 380;
 
     // Draw top 3 container with purple bg and bottom-only border radius
     ctx.fillStyle = 'rgba(103, 58, 183, 0.25)';
@@ -279,6 +291,13 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     ctx.lineWidth = 2;
     roundRectCustom(ctx, topContainerX, topContainerY, topContainerWidth, topContainerHeight, { tl: 0, tr: 0, br: 25, bl: 25 }, false, true);
 
+    // Title inside container
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 36px Cairo';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🏆 Leaderboard - أكثر وقت دراسة', width / 2, topContainerY + 15);
+
     // Draw top 3 with spacing - الأول في النص، الثاني على الشمال، الثالث على اليمين
     const podiumConfigs = [
         { color: 'rgba(255, 215, 0, 0.4)', stroke: '#FFD700', lineWidth: 8, icon: '👑' },
@@ -287,7 +306,7 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     ];
 
     const circleRadius = 90;
-    const top3Y = topContainerY + 90;
+    const top3Y = topContainerY + 130;  // إنزال الدوائر تحت العنوان
     const minSpacing = 40;  // مسافة صغيرة بين الدوائر
 
     // Position configurations: [center, left, right]
