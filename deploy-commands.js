@@ -23,7 +23,7 @@ rest.options.timeout = 60000; // Force timeout setting
         console.log(`Started refreshing ${commands.length} application (/) commands.`);
         
         const clientId = '1468926065853468672';
-        const guildId = process.env.GUILD_ID || '1476589188932440094';
+        const guildId = process.env.GUILD_IDS || '1476589188932440094';
         
         await rest.put(
             Routes.applicationGuildCommands(clientId, guildId),

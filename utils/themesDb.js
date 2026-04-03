@@ -52,13 +52,6 @@ async function getTheme(themeKey) {
 let themeChoicesCache = null;
 
 /**
- * Synchronously get cached theme choices (returns empty array if not loaded yet)
- */
-function getThemeChoicesSync() {
-    return themeChoicesCache || [];
-}
-
-/**
  * Load themes from database and update cache (call once at startup)
  */
 async function getThemeChoices() {
@@ -79,5 +72,5 @@ async function refreshThemeChoices() {
     return await getThemeChoices();
 }
 
-module.exports = { loadThemes, getTheme, getThemeChoices, getThemeChoicesSync, refreshThemeChoices };
+module.exports = { loadThemes, getTheme, getThemeChoices, refreshThemeChoices };
 

@@ -20,14 +20,12 @@ module.exports = {
             option.setName('cycles')
                 .setDescription('عدد الدورات (دراسة + بريك)')
                 .setRequired(true))
-        .addStringOption(option => {
+        .addStringOption(option =>
             option.setName('theme')
                 .setDescription('اختر ثيم التايمر')
-                .setRequired(true);
-            const choices = require('../utils/themesDb').getThemeChoicesSync();
-            choices.forEach(choice => option.addChoices(choice));
-            return option;
-        })
+                .setRequired(true)
+                .setAutocomplete(true)
+        )
         .addStringOption(option =>
             option.setName('update_mode')
                 .setDescription('طريقة تحديث التايمر (الاختيار التلقائي: تحديث نفس الرسالة)')

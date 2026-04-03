@@ -16,6 +16,22 @@ module.exports = {
             return;
         }
 
+        // --- 0. Autocomplete Interactions ---
+        if (interaction.isAutocomplete()) {
+            const focused = interaction.options.getFocused(true);
+            
+            if ((interaction.commandName === 'challenge' || interaction.commandName === 'start') && focused.name === 'theme') {
+                const { getThemeChoices } = require('../utils/themesDb');
+                const choices = await getThemeChoices();
+                const filtered = choices.filter(choice =>
+                    choice.name.toLowerCase().includes(focused.value.toLowerCase()) ||
+                    choice.value.toLowerCase().includes(focused.value.toLowerCase())
+                );
+                await interaction.respond(filtered.slice(0, 25));
+            }
+            return;
+        }
+
         // --- 1. Chat Input Commands ---
         if (interaction.isChatInputCommand()) {
             const command = interaction.client.commands.get(interaction.commandName);
