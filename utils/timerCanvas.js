@@ -279,7 +279,7 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     ctx.lineWidth = 2;
     roundRectCustom(ctx, topContainerX, topContainerY, topContainerWidth, topContainerHeight, { tl: 0, tr: 0, br: 25, bl: 25 }, false, true);
 
-    // Draw top 3 with spacing
+    // Draw top 3 with spacing - الأول في النص، الثاني على الشمال، الثالث على اليمين
     const podiumConfigs = [
         { color: 'rgba(255, 215, 0, 0.4)', stroke: '#FFD700', lineWidth: 8, icon: '👑' },
         { color: 'rgba(192, 192, 192, 0.4)', stroke: '#C0C0C0', lineWidth: 6, icon: '🥈' },
@@ -287,14 +287,20 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     ];
 
     const circleRadius = 90;
-    const top3StartX = 80;
-    const spacingX = (topContainerWidth - 160) / 2;  // Spread circles with spacing
     const top3Y = topContainerY + 90;
+    const minSpacing = 40;  // مسافة صغيرة بين الدوائر
+
+    // Position configurations: [center, left, right]
+    const circleCenters = [
+        width / 2,                                      // الأول في النص
+        width / 2 - (circleRadius * 2 + minSpacing),   // الثاني على الشمال
+        width / 2 + (circleRadius * 2 + minSpacing)    // الثالث على اليمين
+    ];
 
     for (let rank = 0; rank < 3; rank++) {
         if (!topUsers[rank]) continue;
         const config = podiumConfigs[rank];
-        const centerX = top3StartX + rank * (circleRadius * 2 + spacingX);
+        const centerX = circleCenters[rank];
         
         // Circle bg
         ctx.fillStyle = config.color;
