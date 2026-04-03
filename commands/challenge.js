@@ -58,7 +58,7 @@ ${cycleDoneInfo ? `**أقوى دورة:** ${cycleDoneInfo.cycle}` : ''}
 }
 
 module.exports = {
-    data: new Slasالغuilder()
+    data: new SlashCommandBuilder()
         .setName('challenge')
         .setDescription('ابدأ تحدي مذاكرة دوري (سلسلة + إمكانية استكمال يدوي)')
         .addIntegerOption(option => option.setName('study_time').setDescription('وقت الدراسة بالدقائق').setRequired(true))
