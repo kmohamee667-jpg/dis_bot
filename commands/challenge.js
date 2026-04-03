@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, 
 const timerManager = require('../utils/timerManager');
 const { validateGuild } = require('../utils/guildValidator');
 const { drawTimer } = require('../utils/timerCanvas');
-const timerThemes = require('../data/themes.json');
+const { getThemeChoices } = require('../utils/themesDb');
 const { isAdmin } = require('../utils/admin-check');
 
 const CHALLENGE_SUMMARY_CHANNEL = '1487708777678635048';
@@ -58,19 +58,16 @@ ${cycleDoneInfo ? `**أقوى دورة:** ${cycleDoneInfo.cycle}` : ''}
 }
 
 module.exports = {
-    data: new SlashCommandBuilder()
+    data: new Slasالغuilder()
         .setName('challenge')
         .setDescription('ابدأ تحدي مذاكرة دوري (سلسلة + إمكانية استكمال يدوي)')
         .addIntegerOption(option => option.setName('study_time').setDescription('وقت الدراسة بالدقائق').setRequired(true))
         .addIntegerOption(option => option.setName('break_time').setDescription('وقت البريك بالدقائق').setRequired(true))
         .addIntegerOption(option => option.setName('cycles').setDescription('عدد الدورات (دراسة + بريك)').setRequired(true))
-        .addStringOption(option => {
+        .addStringOption(async option => {
             option.setName('theme').setDescription('اختر ثيم التايمر').setRequired(true);
-            Object.keys(timerThemes).forEach(key => {
-                const themeData = timerThemes[key];
-                const choiceName = `${themeData.emoji || '🖼️'} ${themeData.name || key}`;
-                option.addChoices({ name: choiceName, value: key });
-            });
+            const choices = await getThemeChoices();
+            choices.forEach(choice => option.addChoices(choice));
             return option;
         })
         .addStringOption(option => option.setName('cycle_mode').setDescription('وضع السايكل').setRequired(true).addChoices({ name: 'تشغيل متواصل', value: 'auto' }, { name: 'انتظار استكمال يدوي', value: 'manual' }))
@@ -102,7 +99,8 @@ module.exports = {
         const themeKey = interaction.options.getString('theme');
         const updateMode = interaction.options.getString('update_mode') || 'edit';
         const cycleMode = interaction.options.getString('cycle_mode') || 'auto';
-        const theme = timerThemes[themeKey];
+        const theme = await require('../utils/themesDb').getTheme(themeKey);
+
 
         const timerData = {
             guildId: interaction.guildId,
