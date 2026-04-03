@@ -266,7 +266,7 @@ module.exports = {
                         // Generate final leaderboard
                         const topUsers = timerManager.getGuildTopStudy(interaction.guildId, 20);
                         const guildMembers = interaction.guild.members.cache;
-                        const leaderboardBuffer = await drawLeaderboard(topUsers, guildMembers, interaction.guildId);
+                        const leaderboardBuffer = await drawLeaderboard(topUsers, guildMembers, interaction.guildId, interaction.user.id);
                         const leaderboardAttachment = new AttachmentBuilder(leaderboardBuffer, { name: 'leaderboard.png' });
 
                         const finishedEmbed = new EmbedBuilder()
