@@ -67,7 +67,12 @@ module.exports = {
         .addStringOption(option => {
             option.setName('theme').setDescription('اختر ثيم التايمر').setRequired(true);
             const choices = require('../utils/themesDb').getThemeChoicesSync();
-            choices.forEach(choice => option.addChoices(choice));
+            if (choices && choices.length > 0) {
+                choices.forEach(choice => option.addChoices(choice));
+            } else {
+                // Fallback - themes will be available after bot fully loads
+                option.addChoices({ name: '⏳ جاري تحميل الثيمات...', value: 'loading' });
+            }
             return option;
         })
         .addStringOption(option => option.setName('cycle_mode').setDescription('وضع السايكل').setRequired(true).addChoices({ name: 'تشغيل متواصل', value: 'auto' }, { name: 'انتظار استكمال يدوي', value: 'manual' }))

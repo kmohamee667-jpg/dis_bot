@@ -3,6 +3,7 @@ const path = require('node:path');
 const { Collection } = require('discord.js');
 const { loadPermissions } = require('../utils/configDb');
 const timerManager = require('../utils/timerManager');
+const { getThemeChoices } = require('../utils/themesDb');
 
 module.exports = {
     name: 'clientReady',
@@ -10,7 +11,9 @@ module.exports = {
     async execute(client) {
         console.log(`🟢 Logged in as ${client.user.tag}! Ready on ${client.guilds.cache.size} servers.`);
 
+        // Load permissions and themes from database
         await loadPermissions();
+        await getThemeChoices();
 
         // 🔄 استعادة التايمرات من قاعدة البيانات
         await timerManager.restoreTimersFromDb();

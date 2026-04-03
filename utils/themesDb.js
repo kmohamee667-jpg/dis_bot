@@ -51,28 +51,33 @@ async function getTheme(themeKey) {
  */
 let themeChoicesCache = null;
 
+/**
+ * Synchronously get cached theme choices (returns empty array if not loaded yet)
+ */
 function getThemeChoicesSync() {
-    if (!themeChoicesCache) {
-        // Fallback static themes if DB empty
-        themeChoicesCache = [
-            { name: '🌃 Neon Night', value: 'neon' },
-            { name: '🌿 Nature Forest', value: 'nature' },
-            { name: '☁️ Minimalist', value: 'minimal' },
-            { name: '⚔️ Toji', value: 'Toje' },
-            { name: '🌌 Galaxy', value: 'Galaxy' }
-        ];
-    }
-    return themeChoicesCache;
+    return themeChoicesCache || [];
 }
 
+/**
+ * Load themes from database and update cache (call once at startup)
+ */
 async function getThemeChoices() {
     await loadThemes();
     themeChoicesCache = Object.entries(themesCache).map(([key, data]) => ({
         name: `${data.emoji || '🖼️'} ${data.name}`,
         value: key
     }));
+    console.log(`✅ Cached ${themeChoicesCache.length} theme choices for slash commands`);
     return themeChoicesCache;
 }
 
-module.exports = { loadThemes, getTheme, getThemeChoices, getThemeChoicesSync };
+/**
+ * Refresh theme choices from database (useful for detecting new/deleted themes)
+ */
+async function refreshThemeChoices() {
+    themesCache = null; // Clear cache to force reload
+    return await getThemeChoices();
+}
+
+module.exports = { loadThemes, getTheme, getThemeChoices, getThemeChoicesSync, refreshThemeChoices };
 
