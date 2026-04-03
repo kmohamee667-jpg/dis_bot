@@ -296,7 +296,7 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     ctx.font = 'bold 36px Cairo';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText('🏆 Leaderboard - أكثر وقت دراسة', width / 2, topContainerY + 15);
+    ctx.fillText('🏆 Leaderboard - Study Time', width / 2, topContainerY + 15);
 
     // Draw top 3 with spacing - الأول في النص، الثاني على الشمال، الثالث على اليمين
     const podiumConfigs = [
@@ -306,7 +306,7 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     ];
 
     const circleRadius = 90;
-    const top3Y = topContainerY + 130;  // إنزال الدوائر تحت العنوان
+    const top3Y = topContainerY + 160;  // إنزال الدوائر تحت شويط
     const minSpacing = 40;  // مسافة صغيرة بين الدوائر
 
     // Position configurations: [center, left, right]
