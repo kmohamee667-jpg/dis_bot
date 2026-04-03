@@ -47,7 +47,7 @@ async function getTheme(themeKey) {
 }
 
 /**
- * Get all theme choices for slash command
+ * Get all theme choices for slash command (async, loads from DB if needed)
  */
 async function getThemeChoices() {
     const themes = await loadThemes();
@@ -57,5 +57,18 @@ async function getThemeChoices() {
     }));
 }
 
-module.exports = { loadThemes, getTheme, getThemeChoices };
+/**
+ * Get all theme choices synchronously from cache.
+ * Returns an empty array if themes have not been loaded yet.
+ * Call loadThemes() first to populate the cache.
+ */
+function getThemeChoicesSync() {
+    if (!themesCache) return [];
+    return Object.entries(themesCache).map(([key, data]) => ({
+        name: `${data.emoji || '🖼️'} ${data.name}`,
+        value: key
+    }));
+}
+
+module.exports = { loadThemes, getTheme, getThemeChoices, getThemeChoicesSync };
 
