@@ -201,21 +201,7 @@ module.exports = {
 
             if (timer.status === 'finished') {
                 if (timer.mode === 'study') {
-                    // Reward the top participant of this cycle
-                    const sorted = Object.entries(timer.participants)
-                        .sort(([, a], [, b]) => b - a);
 
-                    if (sorted.length > 0) {
-                        const [topUserId, totalSecs] = sorted[0];
-                        if (totalSecs > 0) {
-                            const rewardEmbed = new EmbedBuilder()
-                                .setTitle('🥇 بطل السايكل!')
-                                .setDescription(`مبروك يا <@${topUserId}>! أنت المركز الأول في هذه الدورة، عاش يا وحش! استمر على هذا المنوال. 🔥`)
-                                .setColor('#FFD700')
-                                .setTimestamp();
-                            await interaction.channel.send({ embeds: [rewardEmbed] }).catch(() => {});
-                        }
-                    }
 
                     // Transition to break
                     timer.mode = 'break';

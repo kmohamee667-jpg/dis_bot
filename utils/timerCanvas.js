@@ -243,8 +243,11 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
 }
 
 async function drawLeaderboard(topUsers, guildMembers, guildId) {
+    // Responsive height
     const width = 1200;
-    const height = 900;
+    const baseHeight = 900;
+    const extraUsers = Math.max(0, topUsers.length - 10);
+    const height = baseHeight + extraUsers * 70;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
@@ -261,28 +264,25 @@ async function drawLeaderboard(topUsers, guildMembers, guildId) {
     ctx.textBaseline = 'middle';
     ctx.fillText('🏆 Leaderboard - أكثر وقت دراسة', width / 2, 60);
 
-    // Central podium circles for top 3
-    const podiumY = 200;
+    // Podium circles (LOWER + custom positions)
+    const podiumY = 280;
     const circleRadius = 140;
-    const podiumSpacing = 280;
-
     const podiumConfigs = [
         { color: 'rgba(255, 215, 0, 0.4)', stroke: '#FFD700', lineWidth: 8, icon: '👑', label: 'الأول' },
         { color: 'rgba(192, 192, 192, 0.4)', stroke: '#C0C0C0', lineWidth: 6, icon: '🥈', label: 'الثاني' },
         { color: 'rgba(205, 127, 50, 0.4)', stroke: '#CD7F32', lineWidth: 6, icon: '🥉', label: 'الثالث' }
     ];
 
-    for (let rank = 0; rank < 3; rank++) {
-        if (!topUsers[rank]) break;
-        const config = podiumConfigs[rank];
-        const centerX = 300 + rank * podiumSpacing;
-
-        // Circle background
+    // Position 1: Center, HIGHER
+    if (topUsers[0]) {
+        const config = podiumConfigs[0];
+        const centerX = width / 2;
+        const pos1Y = podiumY - 50;  // Higher
+        // Circle bg
         ctx.fillStyle = config.color;
         ctx.beginPath();
-        ctx.arc(centerX, podiumY, circleRadius, 0, Math.PI * 2);
+        ctx.arc(centerX, pos1Y, circleRadius, 0, Math.PI * 2);
         ctx.fill();
-
         // Border
         ctx.strokeStyle = config.stroke;
         ctx.lineWidth = config.lineWidth;
@@ -290,47 +290,83 @@ async function drawLeaderboard(topUsers, guildMembers, guildId) {
         ctx.shadowColor = config.stroke;
         ctx.stroke();
         ctx.shadowBlur = 0;
-
-        // Crown/Icon above
+        // Icon
         ctx.font = 'bold 60px Cairo';
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
-        ctx.fillText(config.icon, centerX, podiumY - circleRadius - 30);
+        ctx.fillText(config.icon, centerX, pos1Y - circleRadius - 30);
+        // Avatar & text below (same logic)
+        const user = topUsers[0];
+        const member = guildMembers.get(user.userId);
+        const avatarUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 256 }) : null;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX, pos1Y, circleRadius - 30, 0, Math.PI * 2);
+        ctx.clip();
+        if (avatarUrl) {
+            try {
+                const avatarImg = await loadImage(avatarUrl);
+                ctx.drawImage(avatarImg, centerX - (circleRadius - 30), pos1Y - (circleRadius - 30), (circleRadius - 30)*2, (circleRadius - 30)*2);
+            } catch (e) { ctx.fillStyle = '#666'; ctx.fill(); }
+        } else { ctx.fillStyle = '#666'; ctx.fill(); }
+        ctx.restore();
+        // Name
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 28px Cairo';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(member ? member.displayName : user.userId.slice(0,8), centerX, pos1Y + circleRadius + 40);
+        ctx.font = 'bold 24px Cairo';
+        ctx.fillStyle = '#FFD700';
+        const mins1 = Math.floor(user.seconds / 60);
+        ctx.fillText(`${mins1}m`, centerX, pos1Y + circleRadius + 80);
+    }
 
-        // Avatar inside
+    // Pos2 Left, Pos3 Right (same line)
+    for (let rank = 1; rank < 3; rank++) {
+        if (!topUsers[rank]) break;
+        const config = podiumConfigs[rank];
+        const centerX = rank === 1 ? 350 : 850;  // Left & Right
+        const centerY = podiumY;  // Same line
+        // Circle bg
+        ctx.fillStyle = config.color;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, circleRadius, 0, Math.PI * 2);
+        ctx.fill();
+        // Border + rest same as pos1...
+        ctx.strokeStyle = config.stroke;
+        ctx.lineWidth = config.lineWidth;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = config.stroke;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.font = 'bold 60px Cairo';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(config.icon, centerX, centerY - circleRadius - 30);
         const user = topUsers[rank];
         const member = guildMembers.get(user.userId);
         const avatarUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 256 }) : null;
         ctx.save();
         ctx.beginPath();
-        ctx.arc(centerX, podiumY, circleRadius - 30, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, circleRadius - 30, 0, Math.PI * 2);
         ctx.clip();
-
         if (avatarUrl) {
             try {
                 const avatarImg = await loadImage(avatarUrl);
-                ctx.drawImage(avatarImg, centerX - (circleRadius - 30), podiumY - (circleRadius - 30), (circleRadius - 30)*2, (circleRadius - 30)*2);
-            } catch (e) {
-                ctx.fillStyle = '#666';
-                ctx.fill();
-            }
-        } else {
-            ctx.fillStyle = '#666';
-            ctx.fill();
-        }
+                ctx.drawImage(avatarImg, centerX - (circleRadius - 30), centerY - (circleRadius - 30), (circleRadius - 30)*2, (circleRadius - 30)*2);
+            } catch (e) { ctx.fillStyle = '#666'; ctx.fill(); }
+        } else { ctx.fillStyle = '#666'; ctx.fill(); }
         ctx.restore();
-
-        // Name & Time below
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 28px Cairo';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(member ? member.displayName : user.userId.slice(0,8), centerX, podiumY + circleRadius + 40);
-
+        ctx.fillText(member ? member.displayName : user.userId.slice(0,8), centerX, centerY + circleRadius + 40);
         ctx.font = 'bold 24px Cairo';
-        ctx.fillStyle = '#FFD700';
+        ctx.fillStyle = config.stroke;
         const mins = Math.floor(user.seconds / 60);
-        ctx.fillText(`${mins}m`, centerX, podiumY + circleRadius + 80);
+        ctx.fillText(`${mins}m`, centerX, centerY + circleRadius + 80);
     }
 
     // Rest of leaderboard - vertical list
