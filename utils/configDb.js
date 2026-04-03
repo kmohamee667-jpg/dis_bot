@@ -3,16 +3,8 @@ const { getSupabase, safeQuery } = require('./supabase');
 let permissionsCache = {};
 let usingFallback = false;
 
-function loadFallback() {
-    try {
-        const { PERMISSIONS } = require('./config');
-        permissionsCache = PERMISSIONS;
-        usingFallback = true;
-        console.log('⚠️  Supabase permissions unavailable — using local config.js as fallback.');
-    } catch (e) {
-        console.error('❌ Could not load config.js fallback either:', e.message);
-    }
-}
+// DB-ONLY permissions - No fallback to config.js
+
 
 async function loadPermissions() {
     let data;
@@ -26,15 +18,18 @@ async function loadPermissions() {
             return data;
         });
     } catch (err) {
-        console.error('⚠️ Failed to load permissions from Supabase:', err.message);
-        console.error('Falling back to local config.js until Supabase is ready.');
-        loadFallback();
+        console.error('❌ Supabase connection failed:', err.message);
+        console.error('💡 Run seed-permissions.sql in Supabase dashboard');
+        permissionsCache = {};
         return;
     }
 
     if (!data || data.length === 0) {
-        console.warn('⚠️ command_permissions table is empty — falling back to config.js.');
-        loadFallback();
+        console.error('❌ command_permissions table EMPTY');
+        console.error('💡 1. Open seed-permissions.sql');
+        console.error('   2. Run in Supabase SQL Editor');
+        console.error('   3. Restart bot');
+        permissionsCache = {};
         return;
     }
 
@@ -48,7 +43,7 @@ async function loadPermissions() {
     }
     permissionsCache = newCache;
     usingFallback = false;
-    console.log(`✅ Loaded permissions for ${Object.keys(permissionsCache).length} commands from Supabase.`);
+    console.log(`✅ Loaded ${Object.keys(newCache).length} commands from DB!`);
 }
 
 function getPermissionsSync(commandName) {

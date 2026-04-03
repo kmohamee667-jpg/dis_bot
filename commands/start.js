@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const timerManager = require('../utils/timerManager');
 const { validateGuild } = require('../utils/guildValidator');
-const { drawTimer } = require('../utils/timerCanvas');
+const { drawTimer, drawLeaderboard } = require('../utils/timerCanvas');
 const timerThemes = require('../data/themes.json');
 
 module.exports = {
@@ -226,6 +226,23 @@ module.exports = {
                     // ✅ حفظ التغيير في قاعدة البيانات
                     await timerManager.updateCycleInDb(voiceChannel.id, timer.currentCycle, 'break');
 
+                    // Mention all voice members before break
+                    const voiceChannelObj = interaction.guild.channels.cache.get(voiceChannel.id);
+                    const mentions = voiceChannelObj?.members.filter(m => !m.user.bot).map(m => `<@${m.id}>`).join(' ') || '@everyone';
+                    const mentionEmbed = new EmbedBuilder()
+                        .setTitle('🔔 وقت البريك للجميع!')
+                        .setDescription(`${mentions}\n\nانتهى وقت المذاكرة! حان وقت الراحة الآن لمدة **${breakTime} دقائق**. استمتع ببريكك! ☕`)
+                        .setColor('#3498DB')
+                        .setTimestamp();
+                    await interaction.channel.send({ embeds: [mentionEmbed] }).catch(() => {});
+
+                    // Unlock text channel if locked
+                    const everyoneRole = interaction.guild.roles.everyone;
+                    const perms = interaction.channel.permissionsFor(everyoneRole);
+                    if (!perms.has('SendMessages')) {
+                        await interaction.channel.permissionOverwrites.edit(everyoneRole, { SendMessages: true }).catch(() => {});
+                    }
+
                     const breakEmbed = new EmbedBuilder()
                         .setTitle('🔔 وقت البريك!')
                         .setDescription(`انتهى وقت المذاكرة! حان وقت الراحة الآن لمدة **${breakTime} دقائق**. استمتع ببريكك! ☕`)
@@ -264,12 +281,26 @@ module.exports = {
 
                         timerManager.stopTimer(voiceChannel.id);
 
+                        // Generate final leaderboard
+                        const topUsers = timerManager.getGuildTopStudy(interaction.guildId, 20);
+                        const guildMembers = interaction.guild.members.cache;
+                        const leaderboardBuffer = await drawLeaderboard(topUsers, guildMembers, interaction.guildId);
+                        const leaderboardAttachment = new AttachmentBuilder(leaderboardBuffer, { name: 'leaderboard.png' });
+
                         const finishedEmbed = new EmbedBuilder()
+                            .setTitle('🏆 تم الإنجاز - النتائج النهائية!')
+                            .setDescription(`مبروك! تم الانتهاء من جميع الدورات (**${totalCycles} دورات**). فخورين بكم! 🎉\n\nشوفوا الليدربورد أسفل 👇`)
+                            .setColor('#2ECC71')
+                            .setImage('attachment://leaderboard.png')
+                            .setTimestamp();
+                        await interaction.channel.send({ embeds: [finishedEmbed], files: [leaderboardAttachment] }).catch(() => {});
+
+                        const textEmbed = new EmbedBuilder()
                             .setTitle('🏆 تم الإنجاز!')
                             .setDescription(`مبروك! تم الانتهاء من جميع الدورات (**${totalCycles} دورات**). فخورين بك وبمجهودك! اذهب وخذ قسطاً من الراحة. ❤️`)
                             .setColor('#2ECC71')
                             .setTimestamp();
-                        await interaction.channel.send({ embeds: [finishedEmbed] }).catch(() => {});
+                        await interaction.channel.send({ embeds: [textEmbed] }).catch(() => {});
                         return;
                     }
                 }

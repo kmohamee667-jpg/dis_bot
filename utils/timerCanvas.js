@@ -92,38 +92,16 @@ async function drawTimer(timerData, themeData = {}) {
         const itemX = listX + 15 + col * itemWidth;
         const itemY = listY + 80 + row * itemHeight;
 
-        // --- RANKING & STATUS STYLES ---
-        let borderColor = 'rgba(255, 255, 255, 0.05)';
-        let pillBg = 'rgba(0, 0, 0, 0.4)';
-        let rankIcon = '';
-
-        if (i === 0 && totalSeconds > 0) {
-            borderColor = '#FFD700';
-            pillBg = 'rgba(255, 215, 0, 0.2)';
-            rankIcon = '🥇';
-        } else if (i === 1 && totalSeconds > 0) {
-            borderColor = '#C0C0C0';
-            pillBg = 'rgba(192, 192, 192, 0.1)';
-            rankIcon = '🥈';
-        } else if (i === 2 && totalSeconds > 0) {
-            borderColor = '#CD7F32';
-            pillBg = 'rgba(205, 127, 50, 0.1)';
-            rankIcon = '🥉';
-        }
-
-        if (isActive && i > 2) borderColor = '#2ecc71';
+        // Uniform style for all members
+        const borderColor = isActive ? '#2ecc71' : 'rgba(255, 255, 255, 0.3)';
+        const pillBg = 'rgba(0, 0, 0, 0.4)';
+        const lineWidth = 1.5;
 
         // Draw the Member "Pill"
         ctx.fillStyle = pillBg;
-        ctx.strokeStyle = (isActive || i < 3) ? borderColor : 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = i < 3 ? 2.5 : 1.5;
-
-        if (i === 0 && totalSeconds > 0) {
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = '#FFD700';
-        }
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = lineWidth;
         roundRect(ctx, itemX + 3, itemY, itemWidth - 6, 48, 24, true, true);
-        ctx.shadowBlur = 0;
 
         // Circular Avatar
         const avatarX = itemX + avatarRadius + 7;
@@ -147,20 +125,14 @@ async function drawTimer(timerData, themeData = {}) {
         }
         ctx.restore();
 
-        // Crown for #1 (above pill)
-        if (i === 0 && totalSeconds > 0) {
-            ctx.font = '16px Cairo';
-            ctx.textAlign = 'center';
-            ctx.fillText('👑', itemX + 3 + (itemWidth - 6) / 2, itemY - 2);
-        }
+
 
         // Name
-        const isTopOne = (i === 0 && totalSeconds > 0);
-        ctx.fillStyle = isTopOne ? '#FFD700' : '#ffffff';
+        ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left';
         ctx.font = `bold 12px Cairo`;
         const truncatedName = participantName.length > 6 ? participantName.slice(0, 5) + '..' : participantName;
-        ctx.fillText(`${rankIcon}${truncatedName}`, avatarX + avatarRadius + 3, itemY + 18);
+        ctx.fillText(truncatedName, avatarX + avatarRadius + 3, itemY + 18);
 
         // Time
         const pMins = Math.floor(totalSeconds / 60);
@@ -169,8 +141,8 @@ async function drawTimer(timerData, themeData = {}) {
         ctx.font = '10px Cairo';
         ctx.fillText(`${pMins}m ${pSecs}s`, avatarX + avatarRadius + 3, itemY + 33);
 
-        // Active dot
-        if (isActive && i > 2) {
+        // Active dot - for ALL active users
+        if (isActive) {
             ctx.beginPath();
             ctx.arc(avatarX + avatarRadius - 3, avatarY + avatarRadius - 3, 4, 0, Math.PI * 2);
             ctx.fillStyle = '#2ecc71';
@@ -270,4 +242,152 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
     if (stroke) ctx.stroke();
 }
 
-module.exports = { drawTimer };
+async function drawLeaderboard(topUsers, guildMembers, guildId) {
+    const width = 1200;
+    const height = 900;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = '#0f0f1f';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, width, height);
+
+    // Title
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 48px Cairo';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏆 Leaderboard - أكثر وقت دراسة', width / 2, 60);
+
+    // Central podium circles for top 3
+    const podiumY = 200;
+    const circleRadius = 140;
+    const podiumSpacing = 280;
+
+    const podiumConfigs = [
+        { color: 'rgba(255, 215, 0, 0.4)', stroke: '#FFD700', lineWidth: 8, icon: '👑', label: 'الأول' },
+        { color: 'rgba(192, 192, 192, 0.4)', stroke: '#C0C0C0', lineWidth: 6, icon: '🥈', label: 'الثاني' },
+        { color: 'rgba(205, 127, 50, 0.4)', stroke: '#CD7F32', lineWidth: 6, icon: '🥉', label: 'الثالث' }
+    ];
+
+    for (let rank = 0; rank < 3; rank++) {
+        if (!topUsers[rank]) break;
+        const config = podiumConfigs[rank];
+        const centerX = 300 + rank * podiumSpacing;
+
+        // Circle background
+        ctx.fillStyle = config.color;
+        ctx.beginPath();
+        ctx.arc(centerX, podiumY, circleRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = config.stroke;
+        ctx.lineWidth = config.lineWidth;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = config.stroke;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Crown/Icon above
+        ctx.font = 'bold 60px Cairo';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(config.icon, centerX, podiumY - circleRadius - 30);
+
+        // Avatar inside
+        const user = topUsers[rank];
+        const member = guildMembers.get(user.userId);
+        const avatarUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 256 }) : null;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX, podiumY, circleRadius - 30, 0, Math.PI * 2);
+        ctx.clip();
+
+        if (avatarUrl) {
+            try {
+                const avatarImg = await loadImage(avatarUrl);
+                ctx.drawImage(avatarImg, centerX - (circleRadius - 30), podiumY - (circleRadius - 30), (circleRadius - 30)*2, (circleRadius - 30)*2);
+            } catch (e) {
+                ctx.fillStyle = '#666';
+                ctx.fill();
+            }
+        } else {
+            ctx.fillStyle = '#666';
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // Name & Time below
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 28px Cairo';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(member ? member.displayName : user.userId.slice(0,8), centerX, podiumY + circleRadius + 40);
+
+        ctx.font = 'bold 24px Cairo';
+        ctx.fillStyle = '#FFD700';
+        const mins = Math.floor(user.seconds / 60);
+        ctx.fillText(`${mins}m`, centerX, podiumY + circleRadius + 80);
+    }
+
+    // Rest of leaderboard - vertical list
+    ctx.textAlign = 'left';
+    const listStartY = podiumY + circleRadius + 150;
+    const itemHeight = 70;
+    const avatarR = 30;
+    const startRank = 4;
+
+    for (let i = 0; i < topUsers.slice(3).length && listStartY + i * itemHeight < height - 50; i++) {
+        const user = topUsers[startRank - 1 + i];
+        const y = listStartY + i * itemHeight;
+        const member = guildMembers.get(user.userId);
+
+        // Pill background
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        roundRect(ctx, 100, y - 10, width - 200, itemHeight - 20, 25, true, false);
+
+        // Rank number
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 32px Cairo';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${startRank + i}`, 80, y + 5);
+
+        // Avatar
+        const avX = 150;
+        const avY = y;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avX, avY, avatarR, 0, Math.PI * 2);
+        ctx.clip();
+        const avUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 128 }) : null;
+        if (avUrl) {
+            try {
+                const avImg = await loadImage(avUrl);
+                ctx.drawImage(avImg, avX - avatarR, avY - avatarR, avatarR*2, avatarR*2);
+            } catch {}
+        } else {
+            ctx.fillStyle = '#888';
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // Name & Time
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px Cairo';
+        ctx.fillText(member ? member.displayName : user.userId.slice(0,12), avX + avatarR + 20, y + 8);
+
+        ctx.font = '20px Cairo';
+        ctx.fillStyle = '#cccccc';
+        const totalMins = Math.floor(user.seconds / 60);
+        ctx.fillText(`${totalMins}m`, avX + avatarR + 20, y + 40);
+    }
+
+    return canvas.toBuffer('image/png');
+}
+
+module.exports = { drawTimer, drawLeaderboard };
+

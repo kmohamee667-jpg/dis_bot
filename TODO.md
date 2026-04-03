@@ -1,18 +1,29 @@
-# GALAXY ROLE SHOP - Implementation Roadmap
+# TODO: Timer Enhancements
 
-## ✅ Completed Phases
-- [x] Persistent JSON Storage (`users.json`, `shop.json`).
-- [x] Admin Authorization System (Whitelist usernames).
-- [x] Responsive Shop UI (Dual-column desktop / Single-column mobile).
-- [x] Automatic Shop Update logic.
-- [x] Economy: `/daily`, `/coins` (Card view), `/give` (Transaction card).
-- [x] Admin: `/add-role`, `/delete-role`, `/rm-coins`.
+## Approved Plan Steps:
 
-## 🚀 Migration Tasks
-- [x] Update Guild ID in `deploy-commands.js` to `1476589188932440094`.
-- [x] Remove legacy Study Timer documentation and references.
-- [x] Refresh all commands on the new server.
+### 1. ✅ [DONE] Create TODO.md with steps
 
-## 📌 Server Metadata
-- New Guild ID: `1476589188932440094`
-- Application ID: `1468926065853468672`
+### 2. ✅ [DONE] Update utils/timerCanvas.js
+- Remove special styling for top 3 members (gold/silver/bronze, crowns, shadows).
+- Make all member pills uniform (green border/dot for active).
+- Add new `drawLeaderboard(topUsers, guildMembers, guildId)` function:
+  - Central 3 podium circles: Gold 👑, Silver 🥈, Bronze 🥉 with large avatars.
+  - Below: Vertical list #4+ (rank num, avatar, name, time).
+
+### 3. ✅ [DONE] Update commands/start.js
+- End of study phase:
+  - Mention all voice members before break.
+  - Unlock text channel SendMessages for @everyone if denied.
+- Final timer end:
+  - Generate/send leaderboard image embed + text summary.
+
+
+### 4. Test
+- Run /start timer.
+- Verify uniform members list during timer.
+- End cycle → mentions + unlock.
+- Full end → leaderboard image.
+
+### 5. [PENDING] attempt_completion
+

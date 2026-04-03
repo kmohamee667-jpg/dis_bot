@@ -2,16 +2,56 @@ const { isAdmin } = require('./utils/admin-check');
 
 // Mock config
 // Depending on your actual config, you might need to adjust this
-const mockConfig = require('./utils/config');
+// Mock DB permissions (no config.js dependency)
+const mockPermissions = {
+    testcmd: { 
+        users: ['testadmin'], 
+        roles: ['Admin', 'Owner']
+    }
+};
 
-console.log('--- Testing Admin Check Utility ---');
+// Mock DB for testing - override cache
+const configDb = require('./utils/configDb');
+const originalGetPermissionsSync = configDb.getPermissionsSync;
+configDb.getPermissionsSync = function(cmd) {
+    if (cmd === 'testcmd') {
+        return { users: ['testadmin'], roles: ['Admin', 'Owner'] };
+    }
+    return null;
+};
 
-// Test Case 1: Whitelisted User
+console.log('--- Testing Admin Check (DB Mock) ---');
+
+// Test 1: User permission
 const interaction1 = {
-    user: { username: mockConfig.ALLOWED_USERNAMES[0] },
+    user: { username: 'testadmin' },
     member: null
 };
-console.log('Test 1 (Whitelisted):', isAdmin(interaction1) === true ? '✅ PASS' : '❌ FAIL');
+console.log('Test 1 User (testcmd):', isAdmin(interaction1, 'testcmd') ? '✅ PASS' : '❌ FAIL');
+
+// Test 2: Role permission
+const interaction2 = {
+    user: { username: 'normal_user' },
+    member: { 
+        roles: { 
+            cache: [ 
+                { name: 'Owner' }
+            ] 
+        } 
+    }
+};
+interaction2.member.roles.cache.some = Array.prototype.some;
+console.log('Test 2 Role (Owner):', isAdmin(interaction2, 'testcmd') ? '✅ PASS' : '❌ FAIL');
+
+// Test 3: No permission
+const interaction3 = {
+    user: { username: 'random' },
+    member: { 
+        roles: { cache: [{ name: 'Member' }] } 
+    }
+};
+interaction3.member.roles.cache.some = Array.prototype.some;
+console.log('Test 3 No Perm:', !isAdmin(interaction3, 'testcmd') ? '✅ PASS' : '❌ FAIL');
 
 // Test Case 2: User with Admin Role (Cached)
 const interaction2 = {
