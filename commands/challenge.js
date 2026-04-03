@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, 
 const timerManager = require('../utils/timerManager');
 const { validateGuild } = require('../utils/guildValidator');
 const { drawTimer } = require('../utils/timerCanvas');
-const { getThemeChoices } = require('../utils/themesDb');
+const { getThemeChoicesSync } = require('../utils/themesDb');
 const { isAdmin } = require('../utils/admin-check');
 
 const CHALLENGE_SUMMARY_CHANNEL = '1487708777678635048';
@@ -57,22 +57,27 @@ ${cycleDoneInfo ? `**أقوى دورة:** ${cycleDoneInfo.cycle}` : ''}
     if (newMsg) timer.challengeSummaryMessageId = newMsg.id;
 }
 
-module.exports = {
-    data: new SlashCommandBuilder()
+function buildData() {
+    const builder = new SlashCommandBuilder()
         .setName('challenge')
         .setDescription('ابدأ تحدي مذاكرة دوري (سلسلة + إمكانية استكمال يدوي)')
         .addIntegerOption(option => option.setName('study_time').setDescription('وقت الدراسة بالدقائق').setRequired(true))
         .addIntegerOption(option => option.setName('break_time').setDescription('وقت البريك بالدقائق').setRequired(true))
         .addIntegerOption(option => option.setName('cycles').setDescription('عدد الدورات (دراسة + بريك)').setRequired(true))
-        .addStringOption(async option => {
+        .addStringOption(option => {
             option.setName('theme').setDescription('اختر ثيم التايمر').setRequired(true);
-            const choices = await getThemeChoices();
-            choices.forEach(choice => option.addChoices(choice));
+            const choices = getThemeChoicesSync();
+            if (choices.length > 0) choices.forEach(choice => option.addChoices(choice));
             return option;
         })
         .addStringOption(option => option.setName('cycle_mode').setDescription('وضع السايكل').setRequired(true).addChoices({ name: 'تشغيل متواصل', value: 'auto' }, { name: 'انتظار استكمال يدوي', value: 'manual' }))
-        .addStringOption(option => option.setName('update_mode').setDescription('طريقة تحديث رسالة التايمر').addChoices({ name: 'تحديث نفس الرسالة', value: 'edit' }, { name: 'إرسال رسالة جديدة', value: 'new' })),
+        .addStringOption(option => option.setName('update_mode').setDescription('طريقة تحديث رسالة التايمر').addChoices({ name: 'تحديث نفس الرسالة', value: 'edit' }, { name: 'إرسال رسالة جديدة', value: 'new' }));
+    return builder;
+}
 
+module.exports = {
+    data: buildData(),
+    buildData,
 
     async execute(interaction) {
         // ✅ التحقق من Guild ID
