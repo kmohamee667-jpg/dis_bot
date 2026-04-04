@@ -211,12 +211,8 @@ module.exports = {
                     // Mention all voice members before break
                     const voiceChannelObj = interaction.guild.channels.cache.get(voiceChannel.id);
                     const mentions = voiceChannelObj?.members.filter(m => !m.user.bot).map(m => `<@${m.id}>`).join(' ') || '@everyone';
-                    const mentionEmbed = new EmbedBuilder()
-                        .setTitle('🔔 وقت البريك للجميع!')
-                        .setDescription(`${mentions}\n\nانتهى وقت المذاكرة! حان وقت الراحة الآن لمدة **${breakTime} دقائق**. استمتع ببريكك! ☕`)
-                        .setColor('#3498DB')
-                        .setTimestamp();
-                    await interaction.channel.send({ embeds: [mentionEmbed] }).catch(() => {});
+                    const breakMessage = `🔔 وقت البريك للجميع!\n${mentions}\n\nانتهى وقت المذاكرة! حان وقت الراحة الآن لمدة **${breakTime} دقائق**. استمتع ببريكك! ☕`;
+                    await interaction.channel.send({ content: breakMessage }).catch(() => {});
 
                     // Unlock text channel if locked
                     const everyoneRole = interaction.guild.roles.everyone;
@@ -225,12 +221,6 @@ module.exports = {
                         await interaction.channel.permissionOverwrites.edit(everyoneRole, { SendMessages: true }).catch(() => {});
                     }
 
-                    const breakEmbed = new EmbedBuilder()
-                        .setTitle('🔔 وقت البريك!')
-                        .setDescription(`انتهى وقت المذاكرة! حان وقت الراحة الآن لمدة **${breakTime} دقائق**. استمتع ببريكك! ☕`)
-                        .setColor('#3498DB')
-                        .setTimestamp();
-                    await interaction.channel.send({ embeds: [breakEmbed] }).catch(() => {});
                     await resendAtBottom(timer);
 
                 } else {

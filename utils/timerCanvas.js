@@ -273,8 +273,8 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
         ctx.fillRect(0, 0, width, height);
     }
     
-    // Add Dark overlay for readability
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    // Add Dark overlay for readability (darker for better contrast)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.fillRect(0, 0, width, height);
 
     // ===== TOP 3 CONTAINER =====
@@ -307,7 +307,7 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     ];
 
     const circleRadius = 90;
-    const top3Y = topContainerY + 160;  // إنزال الدوائر تحت شويط
+    const top3Y = topContainerY + 210;  // إنزال الدوائر أكثر
     const minSpacing = 40;  // مسافة صغيرة بين الدوائر
 
     // Position configurations: [center, left, right]
@@ -378,7 +378,7 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     const restContainerX = 50;
     const restContainerY = topContainerY + topContainerHeight + 30;
     const restContainerWidth = width - 100;
-    const itemHeight = 65;
+    const itemHeight = 70;  // Increased height for better spacing
     const numRestUsers = topUsers.length - 3;
     const restContainerHeight = Math.max(numRestUsers * itemHeight + 30, 100);
 
@@ -391,28 +391,36 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
     ctx.lineWidth = 2;
     roundRectCustom(ctx, restContainerX, restContainerY, restContainerWidth, restContainerHeight, { tl: 25, tr: 25, br: 0, bl: 0 }, false, true);
 
-    // Draw remaining users
+    // Draw remaining users - improved layout
     for (let i = 3; i < topUsers.length && restContainerY + (i - 3) * itemHeight < height - 30; i++) {
         const user = topUsers[i];
-        const y = restContainerY + (i - 3) * itemHeight + 15;
+        const y = restContainerY + (i - 3) * itemHeight + 10;
         const member = guildMembers.get(user.userId);
         const isCurrentUser = currentUserId && user.userId === currentUserId;
 
-        // Item background (darker for name area)
-        const itemBg = isCurrentUser ? 'rgba(0, 255, 0, 0.1)' : 'rgba(0, 0, 0, 0.3)';
+        // Item background box (individual for each user)
+        const itemBg = isCurrentUser ? 'rgba(0, 255, 0, 0.15)' : 'rgba(0, 0, 0, 0.4)';
         ctx.fillStyle = itemBg;
-        roundRect(ctx, restContainerX + 15, y - 5, restContainerWidth - 30, itemHeight - 10, 15, true, false);
+        const itemBoxHeight = itemHeight - 5;
+        roundRect(ctx, restContainerX + 15, y, restContainerWidth - 30, itemBoxHeight, 12, true, false);
+        
+        // Border for highlight
+        if (isCurrentUser) {
+            ctx.strokeStyle = '#00FF00';
+            ctx.lineWidth = 2;
+            roundRect(ctx, restContainerX + 15, y, restContainerWidth - 30, itemBoxHeight, 12, false, true);
+        }
 
-        // Rank number
+        // Rank number (left side)
         ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 24px Cairo';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${i + 1}`, restContainerX + 30, y + 18);
+        ctx.font = 'bold 20px Cairo';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${i + 1}`, restContainerX + 50, y + itemBoxHeight / 2 + 8);
 
-        // Avatar (small circular)
+        // Avatar (small circular) - next to rank
         const avX = restContainerX + 90;
-        const avY = y + 10;
-        const avRadius = 16;
+        const avY = y + itemBoxHeight / 2;
+        const avRadius = 18;
         
         ctx.save();
         ctx.beginPath();
@@ -424,31 +432,26 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
             try {
                 const avImg = await loadImage(avUrl);
                 ctx.drawImage(avImg, avX - avRadius, avY - avRadius, avRadius * 2, avRadius * 2);
-            } catch {}
+            } catch { ctx.fillStyle = '#555'; ctx.fill(); }
         } else {
-            ctx.fillStyle = '#888';
+            ctx.fillStyle = '#555';
             ctx.fill();
         }
         ctx.restore();
 
-        // Name with dark background
-        const nameX = avX + avRadius + 15;
-        const nameWidth = 250;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        roundRect(ctx, nameX - 5, y, nameWidth, 35, 8, true, false);
-
+        // Name next to avatar
         ctx.textAlign = 'left';
         ctx.fillStyle = isCurrentUser ? '#00FF00' : '#ffffff';
-        ctx.font = isCurrentUser ? 'bold 18px Cairo' : 'bold 16px Cairo';
-        ctx.fillText(member ? member.displayName : user.userId.slice(0, 12), nameX + 5, y + 22);
+        ctx.font = isCurrentUser ? 'bold 16px Cairo' : 'bold 15px Cairo';
+        ctx.fillText(member ? member.displayName : user.userId.slice(0, 12), avX + avRadius + 15, y + itemBoxHeight / 2 - 5);
 
-        // Time on the right
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#cccccc';
-        ctx.font = 'bold 16px Cairo';
+        // Time on the right side
         const totalMins = Math.floor(user.seconds / 60);
         const totalSecs = user.seconds % 60;
-        ctx.fillText(`${totalMins}m ${totalSecs}s`, restContainerX + restContainerWidth - 30, y + 22);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = isCurrentUser ? '#00FF00' : '#cccccc';
+        ctx.font = isCurrentUser ? 'bold 14px Cairo' : 'bold 14px Cairo';
+        ctx.fillText(`${totalMins}m ${totalSecs}s`, restContainerX + restContainerWidth - 30, y + itemBoxHeight / 2 + 8);
     }
 
     return canvas.toBuffer('image/png');
