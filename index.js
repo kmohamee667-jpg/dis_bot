@@ -60,5 +60,10 @@ client.on('error', (error) => console.error('Discord Client Error:', error));
 client.ws.on('error', (error) => console.error('Discord WS Error:', error));
 process.on('unhandledRejection', (reason, promise) => console.error('Unhandled Rejection:', reason));
 
-client.login(process.env.TOKEN);
+(async () => {
+    const { loadPermissions, subscribeToPermissions } = require('./utils/configDb');
+    await loadPermissions();
+    await subscribeToPermissions();
+    client.login(process.env.TOKEN);
+})();
 

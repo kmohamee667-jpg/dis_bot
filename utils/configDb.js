@@ -46,6 +46,17 @@ async function loadPermissions() {
     console.log(`✅ Loaded ${Object.keys(newCache).length} commands from DB!`);
 }
 
+async function subscribeToPermissions() {
+    const supabase = await getSupabase();
+    supabase
+        .channel('public:command_permissions')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'command_permissions' }, (payload) => {
+            console.log('🔄 Permissions changed in DB (Realtime)! Reloading...');
+            loadPermissions();
+        })
+        .subscribe();
+}
+
 function getPermissionsSync(commandName) {
     return permissionsCache[commandName] || null;
 }
@@ -75,4 +86,4 @@ async function removePermission(commandName, type, value) {
     await loadPermissions();
 }
 
-module.exports = { loadPermissions, getPermissionsSync, addPermission, removePermission };
+module.exports = { loadPermissions, subscribeToPermissions, getPermissionsSync, addPermission, removePermission };
