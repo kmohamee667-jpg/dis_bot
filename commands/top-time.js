@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const timerManager = require('../utils/timerManager');
 const { validateGuild } = require('../utils/guildValidator');
 const { isAdmin } = require('../utils/admin-check');
@@ -7,7 +7,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('top-time')
         .setDescription('عرض أعلى 5 في study time من التحدي (مدراء فقط)')
-        .setDMPermission(false),
+        .setDMPermission(false)
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
         // ✅ التحقق من Guild ID

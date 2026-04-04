@@ -1,11 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const timerManager = require('../utils/timerManager');
 const { validateGuild } = require('../utils/guildValidator');
 const { drawTimer } = require('../utils/timerCanvas');
 const { getThemeChoices } = require('../utils/themesDb');
 const { isAdmin } = require('../utils/admin-check');
 
-const CHALLENGE_SUMMARY_CHANNEL = '1487708777678635048';
+const CHALLENGE_SUMMARY_CHANNEL = '1489993576824705074';
 
 function formatMentions(rank) {
     if (!rank || rank.length === 0) return '*لا يوجد مشاركين حتى الآن*';
@@ -25,9 +25,6 @@ async function updateChallengeSummary(client, timer, cycleDoneInfo = null, final
     const currentCycle = timer.currentCycle;
     const totalCycles = timer.totalCycles;
 
-    const cycleTitle = !cycleDoneInfo ? 'بدء التحدي' : `انتهت دورة ${cycleDoneInfo.cycle}`;
-    const cycleLeaders = cycleDoneInfo ? cycleDoneInfo.cycleLeaders : [];
-
     const embed = new EmbedBuilder()
         .setTitle(final ? '🏁 نتائج التحدي النهائي' : `📣 تقرير تحدي غرفة <#${timer.channelId}>`)
         .setDescription(`
@@ -37,14 +34,11 @@ ${cycleDoneInfo ? `**أقوى دورة:** ${cycleDoneInfo.cycle}` : ''}
         `)
         .setColor(final ? '#2ECC71' : '#9B59B6')
         .addFields(
-            { name: '🥇 أفضل 3 في هذه الدورة', value: formatMentions(cycleLeaders) || 'لا بيانات', inline: false },
+            { name: '🥇 أفضل 3 في هذه الدورة', value: formatMentions(cycleDoneInfo?.cycleLeaders) || 'لا بيانات', inline: false },
             { name: '🏆 ترتيب عام (أعلى 3)', value: formatMentions(overallSorted) || 'لا بيانات', inline: false }
         )
         .setFooter({ text: 'تحدي الوقت • تحديث كل دورة تلقائي', iconURL: client.user.displayAvatarURL() })
         .setTimestamp();
-
-    // image placeholder for top scorers
-    embed.setImage(`https://via.placeholder.com/700x200.png?text=${encodeURIComponent(final ? 'Final+Champion' : `Cycle+${currentCycle}`)}`);
 
     if (timer.challengeSummaryMessageId) {
         const existingMsg = await channel.messages.fetch(timer.challengeSummaryMessageId).catch(() => null);
@@ -73,7 +67,8 @@ module.exports = {
         .addStringOption(option => option.setName('cycle_mode').setDescription('وضع السايكل').setRequired(true).addChoices({ name: 'تشغيل متواصل', value: 'auto' }, { name: 'انتظار استكمال يدوي', value: 'manual' }))
         .addStringOption(option => option.setName('update_mode').setDescription('طريقة تحديث رسالة التايمر').addChoices({ name: 'تحديث نفس الرسالة', value: 'edit' }, { name: 'إرسال رسالة جديدة', value: 'new' }))
         .addStringOption(option => option.setName('top3_prize').setDescription('جائزة التوب 3 (كوينز أو رول)'))
-        .addStringOption(option => option.setName('top10_prize').setDescription('جائزة التوب 10 (كوينز أو رول)')),
+        .addStringOption(option => option.setName('top10_prize').setDescription('جائزة التوب 10 (كوينز أو رول)'))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
 
     async execute(interaction) {

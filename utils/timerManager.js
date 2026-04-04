@@ -307,10 +307,6 @@ class TimerManager {
                 const prize = await this.distributePrize(guild, top10, timer.top10_prize);
                 rewardMessage += `🎖️ **مبروك للتوب 10 لحصولكم علي جائزه (${prize})!**\n${top10.map(u => `<@${u.userId}>`).join(' ')}\n\n`;
             }
-
-            // Challenge Summary (Final Update with mentions and branding)
-            const voiceName = client.channels.cache.get(channelId)?.name || 'الروم الصوتي';
-            await this.updateChallengeSummary(client, timer, { cycle: timer.totalCycles, cycleLeaders: [], winners: allWinners, voiceName }, true);
         }
 
         // Leaderboard Image
@@ -319,6 +315,19 @@ class TimerManager {
         const theme = await themeDb.getTheme(timer.themeKey) || {};
         const buffer = await drawLeaderboard(topUsers, guild.members.cache, timer.guildId, timer.starterId, theme);
         const attachment = new AttachmentBuilder(buffer, { name: 'leaderboard.png' });
+
+        if (timer.isChallenge) {
+            // ... prizes calculated above ...
+            // Challenge Summary (Final Update with visual style identical to timer chat)
+            const voiceName = client.channels.cache.get(channelId)?.name || 'الروم الصوتي';
+            await this.updateChallengeSummary(client, timer, { 
+                cycle: timer.totalCycles, 
+                winners: allWinners, 
+                voiceName,
+                attachment, // Pass attachment to summary
+                rewardLabel: rewardMessage.trim() 
+            }, true);
+        }
 
         const embed = new EmbedBuilder()
             .setTitle('🏁 تم الإنجاز - النتائج النهائية!')
@@ -335,37 +344,55 @@ class TimerManager {
         const channel = client.channels.cache.get(CHALLENGE_SUMMARY_CHANNEL) || await client.channels.fetch(CHALLENGE_SUMMARY_CHANNEL).catch(() => null);
         if (!channel) return;
 
-        const { EmbedBuilder } = require('discord.js');
+        const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
         const participantsCount = Object.keys(timer.participants || {}).length;
+
+        if (final) {
+            // EXACTLY LIKE TIMER CHAT STYLE
+            const embed = new EmbedBuilder()
+                .setTitle('🏁 تم الإنجاز - النتائج النهائية!')
+                .setDescription(`🎉 مبروك! تم الانتهاء من جميع الدورات (**${timer.totalCycles} دورة**). فخورين بهذا الإنجاز!`)
+                .setColor('#2ECC71')
+                .setImage('attachment://leaderboard.png')
+                .setTimestamp();
+
+            const content = `👑 **النتائج النهائية للتحدي في (${cycleDoneInfo?.voiceName || 'الروم الصوتي'})**\n\n` +
+                          `${cycleDoneInfo?.rewardLabel || 'تم الانتهاء من التحدي بنجاح!'}\n\n` +
+                          `بالتوفيق ديما ومستنينكو في تحدي جديد 🚀\n\n` +
+                          `-# Galaxy server`;
+
+            try {
+                // If we have an existing summary message, we update it OR send a fresh one for the final result
+                // Usually better to send a fresh one for final results so it stays in history
+                await channel.send({ content, embeds: [embed], files: [cycleDoneInfo.attachment] }).catch(() => null);
+                return;
+            } catch (e) {
+                console.error('Final summary failed:', e.message);
+                return;
+            }
+        }
+
         const overallTop3 = Object.entries(timer.participants || {})
             .map(([userId, seconds]) => ({ userId, seconds }))
             .sort((a, b) => b.seconds - a.seconds)
             .slice(0, 3);
 
         const embed = new EmbedBuilder()
-            .setTitle(final ? '🏁 نتائج التحدي النهائي' : `📣 تقرير تحدي غرفة <#${timer.channelId}>`)
-            .setDescription(`**المشاركون:** \`${participantsCount}\` مشارك\n**الحالة:** ${final ? '✅ تم الانتهاء' : `🔄 جولة ${timer.currentCycle}/${timer.totalCycles}`}`)
-            .setColor(final ? '#2ECC71' : '#9B59B6')
+            .setTitle(`📣 تقرير تحدي غرفة <#${timer.channelId}>`)
+            .setDescription(`**المشاركون:** \`${participantsCount}\` مشارك\n**الحالة:** 🔄 جولة ${timer.currentCycle}/${timer.totalCycles}`)
+            .setColor('#9B59B6')
             .addFields(
                 { name: '🥇 الأوائل في هذه الدورة', value: this.formatMentions(cycleDoneInfo?.cycleLeaders) || '*لا يوجد بيانات*', inline: false },
                 { name: '🏆 الترتيب العام الحالي (Top 3)', value: this.formatMentions(overallTop3) || '*لا يوجد بيانات*', inline: false }
             )
             .setTimestamp();
 
-        let content = null;
-        if (final && cycleDoneInfo?.winners) {
-            content = `👑 **دول الي فازو في التحدي الي كان ف فويس (${cycleDoneInfo.voiceName})**\n` +
-                      `${cycleDoneInfo.winners.map(u => `<@${u.userId}>`).join(' ')}\n\n` +
-                      `بالتوفيق ديما ومستنينكو في تحدي جديد 🚀\n\n` +
-                      `-# Galaxy server`;
-        }
-
         try {
             if (timer.challengeSummaryMessageId) {
                 const msg = await channel.messages.fetch(timer.challengeSummaryMessageId).catch(() => null);
-                if (msg) return await msg.edit({ content, embeds: [embed] }).catch(() => null);
+                if (msg) return await msg.edit({ embeds: [embed] }).catch(() => null);
             }
-            const newMsg = await channel.send({ content, embeds: [embed] }).catch(() => null);
+            const newMsg = await channel.send({ embeds: [embed] }).catch(() => null);
             if (newMsg) {
                 timer.challengeSummaryMessageId = newMsg.id;
                 db.saveTimer(timer).catch(() => {});

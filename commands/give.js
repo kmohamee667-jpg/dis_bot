@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../utils/db');
 const { validateGuild } = require('../utils/guildValidator');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
@@ -24,7 +24,8 @@ module.exports = {
         .addUserOption(option => option.setName('user2').setDescription('المستخدم الثاني'))
         .addUserOption(option => option.setName('user3').setDescription('المستخدم الثالث'))
         .addUserOption(option => option.setName('user4').setDescription('المستخدم الرابع'))
-        .addUserOption(option => option.setName('user5').setDescription('المستخدم الخامس')),
+        .addUserOption(option => option.setName('user5').setDescription('المستخدم الخامس'))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
         // ✅ التحقق من Guild ID
         if (!await validateGuild(interaction)) return;

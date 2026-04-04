@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const db = require('../utils/db');
 const { validateGuild } = require('../utils/guildValidator');
 const { isAdmin } = require('../utils/admin-check');
@@ -10,7 +10,8 @@ module.exports = {
         .addUserOption(option =>
             option.setName('user').setDescription('المستخدم المراد تصفير كويناته'))
         .addStringOption(option =>
-            option.setName('target').setDescription('اكتب all لتصفير الجميع').addChoices({ name: 'all', value: 'all' })),
+            option.setName('target').setDescription('اكتب all لتصفير الجميع').addChoices({ name: 'all', value: 'all' }))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
         // ✅ التحقق من Guild ID
         if (!await validateGuild(interaction)) return;

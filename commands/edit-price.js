@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const shopDb = require('../utils/shopDb');
 const { validateGuild } = require('../utils/guildValidator');
 const { isAdmin } = require('../utils/admin-check');
@@ -10,7 +10,8 @@ module.exports = {
         .addRoleOption(option =>
             option.setName('role').setDescription('الرتبة المراد تعديل سعرها').setRequired(true))
         .addIntegerOption(option =>
-            option.setName('price').setDescription('السعر الجديد بالكوينات').setRequired(true)),
+            option.setName('price').setDescription('السعر الجديد بالكوينات').setRequired(true))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
         // ✅ التحقق من Guild ID
         if (!await validateGuild(interaction)) return;
