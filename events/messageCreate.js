@@ -1,5 +1,5 @@
 const { EmbedBuilder, MessageFlags } = require('discord.js');
-const { isAdmin } = require('../utils/admin-check');
+const { isAdmin, isAdminSync } = require('../utils/admin-check');
 const { getPermissionsSync } = require('../utils/configDb');
 const { logAction } = require('../utils/logger');
 const timerManager = require('../utils/timerManager');
@@ -78,6 +78,19 @@ module.exports = {
             }
 
             // 8. Send confirmation embed
+            if (toDelete.size === 0) {
+                const noMsg = await message.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription("❌ لا توجد رسائل للمسح في هذه القناة.")
+                            .setColor('#E74C3C')
+                    ]
+                }).catch(() => null);
+                if (noMsg) setTimeout(() => noMsg.delete().catch(() => {}), 4000);
+                if (message.deletable) await message.delete().catch(() => {});
+                return;
+            }
+
             const confirmEmbed = new EmbedBuilder()
                 .setTitle('🗑️ تم المسح')
                 .setDescription(`تم مسح **${deletedCount}** رسالة بواسطة ${message.author}`)
@@ -107,7 +120,7 @@ module.exports = {
 
         // ─── Keyword: قفل ──────────────────────────────────────────────
         if (content === 'قفل') {
-            if (!await isAdmin(message, 'قفل')) {
+            if (!isAdminSync(message, 'قفل')) {
                 const denyMsg = await message.reply({
                     embeds: [
                         new EmbedBuilder()
@@ -116,6 +129,22 @@ module.exports = {
                     ]
                 }).catch(() => null);
                 if (denyMsg) setTimeout(() => denyMsg.delete().catch(() => {}), 4000);
+                return;
+            }
+
+            // Check if already locked
+            const everyoneRole = message.guild.roles.everyone;
+            const currentOverwrites = message.channel.permissionOverwrites.cache.get(everyoneRole.id);
+            if (currentOverwrites && currentOverwrites.deny.has('SendMessages')) {
+                const stateMsg = await message.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription("🔒 **هذه القناة مقفلة بالفعل!**")
+                            .setColor('#F1C40F')
+                    ]
+                }).catch(() => null);
+                if (stateMsg) setTimeout(() => stateMsg.delete().catch(() => {}), 4000);
+                if (message.deletable) await message.delete().catch(() => {});
                 return;
             }
 
@@ -186,7 +215,7 @@ module.exports = {
 
         // ─── Keyword: فتح ──────────────────────────────────────────────
         if (content === 'فتح') {
-            if (!await isAdmin(message, 'قفل')) {
+            if (!isAdminSync(message, 'قفل')) {
                 const denyMsg = await message.reply({
                     embeds: [
                         new EmbedBuilder()
@@ -195,6 +224,22 @@ module.exports = {
                     ]
                 }).catch(() => null);
                 if (denyMsg) setTimeout(() => denyMsg.delete().catch(() => {}), 4000);
+                return;
+            }
+
+            // Check if already open
+            const everyoneRole = message.guild.roles.everyone;
+            const currentOverwrites = message.channel.permissionOverwrites.cache.get(everyoneRole.id);
+            if (!currentOverwrites || !currentOverwrites.deny.has('SendMessages')) {
+                const stateMsg = await message.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription("🔓 **هذه القناة مفتوحة بالفعل!**")
+                            .setColor('#F1C40F')
+                    ]
+                }).catch(() => null);
+                if (stateMsg) setTimeout(() => stateMsg.delete().catch(() => {}), 4000);
+                if (message.deletable) await message.delete().catch(() => {});
                 return;
             }
 
