@@ -248,18 +248,24 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
 }
 
 /**
- * Canvas-based leaderboard renderer (fallback)
+ * Canvas-based leaderboard renderer (fallback or chosen)
  */
 async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUserId = null, themeData = {}) {
-    // Match timerCanvas exactly: 1200x700 fixed size
     const width = 1200;
     const height = 700;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Background with theme image
-    const bgPath = themeData && themeData.path ? path.join(__dirname, '../', themeData.path) : null;
+    // 1. BACKGROUND (Radial Gradient from CSS)
+    const gradient = ctx.createRadialGradient(width / 2, 0, 100, width / 2, 0, width);
+    gradient.addColorStop(0, '#1a0033'); // Top color
+    gradient.addColorStop(1, '#000000'); // Bottom color
     
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // Optional background image with darker overlay
+    const bgPath = themeData && themeData.path ? path.join(__dirname, '../', themeData.path) : null;
     if (bgPath) {
         try {
             const bg = await loadImage(bgPath);
@@ -268,199 +274,203 @@ async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUse
             const ratio = Math.max(hRatio, vRatio);
             const centerShiftX = (canvas.width - bg.width * ratio) / 2;
             const centerShiftY = (canvas.height - bg.height * ratio) / 2;
+            ctx.save();
+            ctx.globalAlpha = 0.4; // Make background image subtle
             ctx.drawImage(bg, 0, 0, bg.width, bg.height, centerShiftX, centerShiftY, bg.width * ratio, bg.height * ratio);
-        } catch (e) {
-            ctx.fillStyle = '#0f0f1f';
-            ctx.fillRect(0, 0, width, height);
-        }
-    } else {
-        ctx.fillStyle = '#0f0f1f';
-        ctx.fillRect(0, 0, width, height);
+            ctx.restore();
+        } catch (e) {}
     }
-    
-    // Add Dark overlay for readability (darker for better contrast)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-    ctx.fillRect(0, 0, width, height);
 
-    // ===== TOP 3 CONTAINER =====
-    const topContainerX = 50;
-    const topContainerY = 50;
-    const topContainerWidth = width - 100;
-    const topContainerHeight = 380;
-
-    // Draw top 3 container with purple bg and bottom-only border radius
-    ctx.fillStyle = 'rgba(103, 58, 183, 0.25)';
-    roundRectCustom(ctx, topContainerX, topContainerY, topContainerWidth, topContainerHeight, { tl: 0, tr: 0, br: 25, bl: 25 }, true, false);
-    
-    // Border for top 3 container
-    ctx.strokeStyle = 'rgba(147, 112, 219, 0.6)';
-    ctx.lineWidth = 2;
-    roundRectCustom(ctx, topContainerX, topContainerY, topContainerWidth, topContainerHeight, { tl: 0, tr: 0, br: 25, bl: 25 }, false, true);
-
-    // Title inside container
+    // 2. TITLE (from CSS)
     ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 36px Cairo';
+    ctx.font = 'bold 40px Cairo';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText('🏆 Leaderboard - Study Time', width / 2, topContainerY + 15);
+    
+    // Add text shadow
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#FFD700';
+    ctx.fillText('🏆 Leaderboard - Study Time', width / 2, 30);
+    ctx.shadowBlur = 0; // Reset shadow
 
-    // Draw top 3 with spacing - الأول في النص، الثاني على الشمال، الثالث على اليمين
+    // 3. PODIUM (TOP 3) CONTAINER
+    const podiumX = 40;
+    const podiumY = 100;
+    const podiumWidth = width - 80;
+    const podiumHeight = 300;
+
+    // Gradient background for podium
+    const podiumGrad = ctx.createLinearGradient(podiumX, podiumY, podiumX + podiumWidth, podiumY + podiumHeight);
+    podiumGrad.addColorStop(0, 'rgba(90, 0, 150, 0.4)');
+    podiumGrad.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+    
+    ctx.fillStyle = podiumGrad;
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+    ctx.lineWidth = 1;
+    // Border radius: 0 0 80px 80px (from CSS)
+    roundRectCustom(ctx, podiumX, podiumY, podiumWidth, podiumHeight, { tl: 0, tr: 0, br: 80, bl: 80 }, true, true);
+
+    // 4. DRAW TOP 3 (Podium Items)
     const podiumConfigs = [
-        { color: 'rgba(255, 215, 0, 0.4)', stroke: '#FFD700', lineWidth: 8, icon: '👑' },
-        { color: 'rgba(192, 192, 192, 0.4)', stroke: '#C0C0C0', lineWidth: 6, icon: '🥈' },
-        { color: 'rgba(205, 127, 50, 0.4)', stroke: '#CD7F32', lineWidth: 6, icon: '🥉' }
+        { rank: 1, relPos: 'center', color: '#FFD700', size: 180, border: 6, glow: 25, label: 'Gold' },
+        { rank: 2, relPos: 'left', color: '#C0C0C0', size: 150, border: 5, glow: 0, label: 'Silver' },
+        { rank: 3, relPos: 'right', color: '#CD7F32', size: 150, border: 5, glow: 0, label: 'Bronze' }
     ];
 
-    const circleRadius = 90;
-    const top3Y = topContainerY + 210;  // إنزال الدوائر أكثر
-    const minSpacing = 40;  // مسافة صغيرة بين الدوائر
+    const podiumYCenter = podiumY + 140;
+    const centerX = width / 2;
+    const sideOffset = 240;
 
-    // Position configurations: [center, left, right]
-    const circleCenters = [
-        width / 2,                                      // الأول في النص
-        width / 2 - (circleRadius * 2 + minSpacing),   // الثاني على الشمال
-        width / 2 + (circleRadius * 2 + minSpacing)    // الثالث على اليمين
-    ];
+    // Draw in order 2, 3, then 1 so 1 is on top if they overlap
+    const drawOrder = [1, 2, 0]; 
+    for (const idx of drawOrder) {
+        const config = podiumConfigs[idx];
+        const user = topUsers[idx];
+        if (!user) continue;
 
-    for (let rank = 0; rank < 3; rank++) {
-        if (!topUsers[rank]) continue;
-        const config = podiumConfigs[rank];
-        const centerX = circleCenters[rank];
-        
-        // Circle bg
-        ctx.fillStyle = config.color;
-        ctx.beginPath();
-        ctx.arc(centerX, top3Y, circleRadius, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Border with glow
-        ctx.strokeStyle = config.stroke;
-        ctx.lineWidth = config.lineWidth;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = config.stroke;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        
-        // Icon above
-        ctx.font = 'bold 50px Cairo';
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.fillText(config.icon, centerX, top3Y - circleRadius - 20);
-        
-        // Avatar inside circle
-        const user = topUsers[rank];
+        let itemX = centerX;
+        if (config.relPos === 'left') itemX = centerX - sideOffset;
+        if (config.relPos === 'right') itemX = centerX + sideOffset;
+
+        const radius = config.size / 2;
         const member = guildMembers.get(user.userId);
-        const avatarUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 256 }) : null;
-        
+        const avatarUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 512 }) : null;
+
+        // Draw Avatar with border and glow
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(centerX, top3Y, circleRadius - 20, 0, Math.PI * 2);
-        ctx.clip();
+        if (config.glow > 0) {
+            ctx.shadowBlur = config.glow;
+            ctx.shadowColor = config.color;
+        }
         
+        // Border
+        ctx.strokeStyle = config.color;
+        ctx.lineWidth = config.border;
+        ctx.beginPath();
+        ctx.arc(itemX, podiumYCenter, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0; // Reset
+
+        // Clip for avatar
+        ctx.beginPath();
+        ctx.arc(itemX, podiumYCenter, radius - config.border / 2, 0, Math.PI * 2);
+        ctx.clip();
+
         if (avatarUrl) {
             try {
                 const avatarImg = await loadImage(avatarUrl);
-                ctx.drawImage(avatarImg, centerX - (circleRadius - 20), top3Y - (circleRadius - 20), (circleRadius - 20) * 2, (circleRadius - 20) * 2);
-            } catch (e) { ctx.fillStyle = '#666'; ctx.fill(); }
-        } else { ctx.fillStyle = '#666'; ctx.fill(); }
-        ctx.restore();
-        
-        // Name below circle
-        const isCurrentUser = currentUserId && user.userId === currentUserId;
-        ctx.fillStyle = isCurrentUser ? '#00FF00' : '#ffffff';
-        ctx.font = isCurrentUser ? 'bold 22px Cairo' : 'bold 20px Cairo';
-        ctx.textAlign = 'center';
-        ctx.fillText(member ? member.displayName : user.userId.slice(0, 8), centerX, top3Y + circleRadius + 30);
-        
-        // Time below name
-        ctx.font = 'bold 18px Cairo';
-        ctx.fillStyle = config.stroke;
-        const mins = Math.floor(user.seconds / 60);
-        ctx.fillText(`${mins}m`, centerX, top3Y + circleRadius + 60);
-    }
-
-    // ===== REST OF USERS CONTAINER =====
-    const restContainerX = 50;
-    const restContainerY = topContainerY + topContainerHeight + 30;
-    const restContainerWidth = width - 100;
-    const itemHeight = 70;  // Increased height for better spacing
-    const numRestUsers = topUsers.length - 3;
-    const restContainerHeight = Math.max(numRestUsers * itemHeight + 30, 100);
-
-    // Draw rest container with purple bg and top-only border radius
-    ctx.fillStyle = 'rgba(103, 58, 183, 0.15)';
-    roundRectCustom(ctx, restContainerX, restContainerY, restContainerWidth, restContainerHeight, { tl: 25, tr: 25, br: 0, bl: 0 }, true, false);
-    
-    // Border for rest container
-    ctx.strokeStyle = 'rgba(147, 112, 219, 0.4)';
-    ctx.lineWidth = 2;
-    roundRectCustom(ctx, restContainerX, restContainerY, restContainerWidth, restContainerHeight, { tl: 25, tr: 25, br: 0, bl: 0 }, false, true);
-
-    // Draw remaining users - improved layout
-    for (let i = 3; i < topUsers.length && restContainerY + (i - 3) * itemHeight < height - 30; i++) {
-        const user = topUsers[i];
-        const y = restContainerY + (i - 3) * itemHeight + 10;
-        const member = guildMembers.get(user.userId);
-        const isCurrentUser = currentUserId && user.userId === currentUserId;
-
-        // Item background box (individual for each user)
-        const itemBg = isCurrentUser ? 'rgba(0, 255, 0, 0.15)' : 'rgba(0, 0, 0, 0.4)';
-        ctx.fillStyle = itemBg;
-        const itemBoxHeight = itemHeight - 5;
-        roundRect(ctx, restContainerX + 15, y, restContainerWidth - 30, itemBoxHeight, 12, true, false);
-        
-        // Border for highlight
-        if (isCurrentUser) {
-            ctx.strokeStyle = '#00FF00';
-            ctx.lineWidth = 2;
-            roundRect(ctx, restContainerX + 15, y, restContainerWidth - 30, itemBoxHeight, 12, false, true);
-        }
-
-        // Rank number (left side)
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 20px Cairo';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${i + 1}`, restContainerX + 50, y + itemBoxHeight / 2 + 8);
-
-        // Avatar (small circular) - next to rank
-        const avX = restContainerX + 90;
-        const avY = y + itemBoxHeight / 2;
-        const avRadius = 18;
-        
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(avX, avY, avRadius, 0, Math.PI * 2);
-        ctx.clip();
-        
-        const avUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 128 }) : null;
-        if (avUrl) {
-            try {
-                const avImg = await loadImage(avUrl);
-                ctx.drawImage(avImg, avX - avRadius, avY - avRadius, avRadius * 2, avRadius * 2);
-            } catch { ctx.fillStyle = '#555'; ctx.fill(); }
+                ctx.drawImage(avatarImg, itemX - radius, podiumYCenter - radius, config.size, config.size);
+            } catch (e) {
+                ctx.fillStyle = '#333';
+                ctx.fill();
+            }
         } else {
-            ctx.fillStyle = '#555';
+            ctx.fillStyle = '#333';
             ctx.fill();
         }
         ctx.restore();
 
-        // Name next to avatar
-        ctx.textAlign = 'left';
-        ctx.fillStyle = isCurrentUser ? '#00FF00' : '#ffffff';
-        ctx.font = isCurrentUser ? 'bold 16px Cairo' : 'bold 15px Cairo';
-        ctx.fillText(member ? member.displayName : user.userId.slice(0, 12), avX + avRadius + 15, y + itemBoxHeight / 2 - 5);
+        // Name and Time below
+        const displayName = member ? member.displayName : user.userId.slice(0, 8);
+        const mins = Math.floor(user.seconds / 60);
 
-        // Time on the right side
-        const totalMins = Math.floor(user.seconds / 60);
-        const totalSecs = user.seconds % 60;
-        ctx.textAlign = 'right';
-        ctx.fillStyle = isCurrentUser ? '#00FF00' : '#cccccc';
-        ctx.font = isCurrentUser ? 'bold 14px Cairo' : 'bold 14px Cairo';
-        ctx.fillText(`${totalMins}m ${totalSecs}s`, restContainerX + restContainerWidth - 30, y + itemBoxHeight / 2 + 8);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px Cairo';
+        ctx.fillText(displayName, itemX, podiumYCenter + radius + 40);
+
+        ctx.fillStyle = config.color;
+        ctx.font = 'bold 20px Cairo';
+        ctx.fillText(`${mins}m`, itemX, podiumYCenter + radius + 65);
+    }
+
+    // 5. USERS LIST CONTAINER (Rank 4+)
+    const listX = 60;
+    const listY = podiumY + podiumHeight + 30;
+    const listWidth = width - 120;
+    const listPadding = 20;
+    
+    const visibleUsers = topUsers.slice(3, 8); // Show up to 5 more
+    const itemHeight = 75;
+    const listHeight = visibleUsers.length > 0 ? (visibleUsers.length * itemHeight) + (listPadding * 2) : 0;
+
+    if (visibleUsers.length > 0) {
+        ctx.fillStyle = 'rgba(80, 0, 120, 0.2)';
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, listX, listY, listWidth, listHeight, 25, true, true);
+
+        for (let i = 0; i < visibleUsers.length; i++) {
+            const user = visibleUsers[i];
+            const rank = i + 4;
+            const itemY = listY + listPadding + (i * itemHeight);
+            const itemX = listX + 20;
+            const iWidth = listWidth - 40;
+            const iHeight = itemHeight - 15;
+            const isCurrentUser = currentUserId && user.userId === currentUserId;
+
+            // Gradient for item
+            const itemGrad = ctx.createLinearGradient(itemX, itemY, itemX + iWidth, itemY + iHeight);
+            itemGrad.addColorStop(0, 'rgba(30, 0, 60, 0.6)');
+            itemGrad.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+
+            ctx.save();
+            ctx.fillStyle = itemGrad;
+            ctx.strokeStyle = isCurrentUser ? '#00ff4c' : 'rgba(255, 215, 0, 0.1)';
+            ctx.lineWidth = isCurrentUser ? 2 : 1;
+            
+            if (isCurrentUser) {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00ff4c';
+            }
+            
+            roundRect(ctx, itemX, itemY, iWidth, iHeight, 15, true, true);
+            ctx.restore();
+
+            // Rank
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 22px Cairo';
+            ctx.textAlign = 'center';
+            ctx.fillText(rank.toString(), itemX + 35, itemY + iHeight / 2 + 8);
+
+            // Avatar (small)
+            const member = guildMembers.get(user.userId);
+            const avUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 128 }) : null;
+            const avSize = 40;
+            const avX = itemX + 75;
+            const avY = itemY + (iHeight - avSize) / 2;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(avX + avSize/2, avY + avSize/2, avSize/2, 0, Math.PI * 2);
+            ctx.clip();
+            if (avUrl) {
+                try {
+                    const avImg = await loadImage(avUrl);
+                    ctx.drawImage(avImg, avX, avY, avSize, avSize);
+                } catch(e) { ctx.fillStyle = '#444'; ctx.fill(); }
+            } else { ctx.fillStyle = '#444'; ctx.fill(); }
+            ctx.restore();
+
+            // Name
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 20px Cairo';
+            const displayName = member ? (member.displayName.length > 20 ? member.displayName.slice(0, 18) + '..' : member.displayName) : user.userId.slice(0, 12);
+            ctx.fillText(displayName, avX + avSize + 20, itemY + iHeight / 2 + 8);
+
+            // Time with Emoji
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 18px Cairo';
+            const mins = Math.floor(user.seconds / 60);
+            ctx.fillText(`⏱️ ${mins}m`, itemX + iWidth - 25, itemY + iHeight / 2 + 8);
+        }
     }
 
     return canvas.toBuffer('image/png');
 }
+
 
 /**
  * Helper to draw rounded rectangles with custom radius for each corner
