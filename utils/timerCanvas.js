@@ -244,26 +244,16 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
 }
 
 async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = null, themeData = {}) {
-    // Try to use new HTML renderer first (if Puppeteer is installed)
-    try {
-        const { renderLeaderboardScreenshot } = require('./leaderboardRenderer');
-        const screenshot = await renderLeaderboardScreenshot(topUsers, guildMembers, currentUserId);
-        return screenshot;
-    } catch (error) {
-        console.warn('⚠️ Puppeteer not available, falling back to Canvas rendering:', error.message);
-        return await drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUserId, themeData);
-    }
+    return await drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUserId, themeData);
 }
 
 /**
  * Canvas-based leaderboard renderer (fallback)
  */
 async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUserId = null, themeData = {}) {
-    // Responsive height
+    // Match timerCanvas exactly: 1200x700 fixed size
     const width = 1200;
-    const baseHeight = 950;
-    const extraUsers = Math.max(0, topUsers.length - 10);
-    const height = baseHeight + extraUsers * 65;
+    const height = 700;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 

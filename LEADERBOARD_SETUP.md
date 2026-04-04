@@ -1,6 +1,29 @@
-# 📊 Leaderboard Rendering System
+# 📊 Leaderboard - Canvas Only (Timer Style Match)
 
-تم تطوير نظام جديد لعرض الليدربورد بـ HTML/CSS مع Puppeteer!
+**تم تحسين الليدربورد ليطابق تصميم التايمر بالضبط!**
+
+## 🎯 الميزات الجديدة:
+- ✅ **Canvas Only** - بدون Puppeteer/HTML (أسرع + أخف)
+- ✅ **تصميم مطابق للتايمر** - قائمة وردية 3 أعمدة + دائرة رئيسية
+- ✅ **حجم ثابت 1200x700** - نفس التايمر
+- ✅ **الهايلايت + الأيقونات** - 👑🥈🥉 مع أفاتار + وقت
+
+## 📁 تم حذف:
+```
+❌ utils/leaderboardRenderer.js
+❌ public/leaderboard.html  
+❌ public/leaderboard.css
+```
+
+## 💻 الاستخدام:
+```js
+const leaderboardBuffer = await drawLeaderboard(topUsers, guildMembers, guildId, user.id, theme);
+```
+
+## ✅ جاهز للاختبار:
+1. `node index.js`
+2. `/start study_time:25 break_time:5 cycles:2`
+3. أكمل الدورات → شوف الليدربورد المتطابق! 🔥
 
 ## 🚀 الميزات
 
