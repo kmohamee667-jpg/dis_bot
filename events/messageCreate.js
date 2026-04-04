@@ -18,7 +18,7 @@ module.exports = {
             // ✅ تحقق من Server ID - اجبر استخدام السيرفر المحدد فقط
             if (allowedGuildId && message.guildId !== allowedGuildId) {
                 return await message.reply({
-                    content: '❌ **No Permission to work here!**\nهذا الأمر يعمل فقط في السيرفر المخصص',
+                    content: '❌ **No Permission to work here!',
                     flags: [MessageFlags.Ephemeral]
                 }).catch(() => {});
             }

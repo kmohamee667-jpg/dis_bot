@@ -248,23 +248,32 @@ async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = 
 }
 
 /**
- * Canvas-based leaderboard renderer (fallback or chosen)
+ * Canvas-based leaderboard renderer (dynamic responsive height)
  */
 async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUserId = null, themeData = {}) {
     const width = 1200;
-    const height = 700;
-    const canvas = createCanvas(width, height);
+    const itemHeight = 85; 
+    const podiumY = 40;
+    const podiumHeight = 450; // Increased to fit title + podium
+    const listMarginTop = 30;
+    
+    // 1. CALCULATE DYNAMIC HEIGHT
+    const visibleUsers = topUsers.slice(3);
+    const listHeight = visibleUsers.length > 0 ? (visibleUsers.length * itemHeight) + 40 : 0;
+    const totalHeight = podiumY + podiumHeight + listHeight + 80;
+    
+    const canvas = createCanvas(width, totalHeight);
     const ctx = canvas.getContext('2d');
 
-    // 1. BACKGROUND (Radial Gradient from CSS)
-    const gradient = ctx.createRadialGradient(width / 2, 0, 100, width / 2, 0, width);
-    gradient.addColorStop(0, '#1a0033'); // Top color
-    gradient.addColorStop(1, '#000000'); // Bottom color
+    // 2. BACKGROUND (Radial Gradient from CSS)
+    const gradient = ctx.createRadialGradient(width / 2, 0, 100, width / 2, 0, totalHeight);
+    gradient.addColorStop(0, '#1a0033'); 
+    gradient.addColorStop(1, '#000000'); 
     
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, width, totalHeight);
 
-    // Optional background image with darker overlay
+    // Optional background image
     const bgPath = themeData && themeData.path ? path.join(__dirname, '../', themeData.path) : null;
     if (bgPath) {
         try {
@@ -272,129 +281,94 @@ async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUse
             const hRatio = canvas.width / bg.width;
             const vRatio = canvas.height / bg.height;
             const ratio = Math.max(hRatio, vRatio);
-            const centerShiftX = (canvas.width - bg.width * ratio) / 2;
-            const centerShiftY = (canvas.height - bg.height * ratio) / 2;
             ctx.save();
-            ctx.globalAlpha = 0.4; // Make background image subtle
-            ctx.drawImage(bg, 0, 0, bg.width, bg.height, centerShiftX, centerShiftY, bg.width * ratio, bg.height * ratio);
+            ctx.globalAlpha = 0.35;
+            ctx.drawImage(bg, 0, 0, bg.width, bg.height, (width - bg.width * ratio) / 2, 0, bg.width * ratio, bg.height * ratio);
             ctx.restore();
         } catch (e) {}
     }
 
-    // 2. TITLE (from CSS)
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 40px Cairo';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    
-    // Add text shadow
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#FFD700';
-    ctx.fillText('🏆 Leaderboard - Study Time', width / 2, 30);
-    ctx.shadowBlur = 0; // Reset shadow
-
-    // 3. PODIUM (TOP 3) CONTAINER
+    // 3. PODIUM CONTAINER (Title inside)
     const podiumX = 40;
-    const podiumY = 100;
-    const podiumWidth = width - 80;
-    const podiumHeight = 300;
+    const pWidth = width - 80;
 
-    // Gradient background for podium
-    const podiumGrad = ctx.createLinearGradient(podiumX, podiumY, podiumX + podiumWidth, podiumY + podiumHeight);
+    const podiumGrad = ctx.createLinearGradient(podiumX, podiumY, podiumX + pWidth, podiumY + podiumHeight);
     podiumGrad.addColorStop(0, 'rgba(90, 0, 150, 0.4)');
     podiumGrad.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
     
     ctx.fillStyle = podiumGrad;
     ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
     ctx.lineWidth = 1;
-    // Border radius: 0 0 80px 80px (from CSS)
-    roundRectCustom(ctx, podiumX, podiumY, podiumWidth, podiumHeight, { tl: 0, tr: 0, br: 80, bl: 80 }, true, true);
+    roundRectCustom(ctx, podiumX, podiumY, pWidth, podiumHeight, { tl: 0, tr: 0, br: 80, bl: 80 }, true, true);
 
-    // 4. DRAW TOP 3 (Podium Items)
+    // TITLE (Inside Podium)
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 44px Cairo';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#FFD700';
+    ctx.fillText('🏆 Leaderboard - Study Time', width / 2, podiumY + 30);
+    ctx.shadowBlur = 0;
+
+    // 4. DRAW TOP 3
     const podiumConfigs = [
-        { rank: 1, relPos: 'center', color: '#FFD700', size: 180, border: 6, glow: 25, label: 'Gold' },
-        { rank: 2, relPos: 'left', color: '#C0C0C0', size: 150, border: 5, glow: 0, label: 'Silver' },
-        { rank: 3, relPos: 'right', color: '#CD7F32', size: 150, border: 5, glow: 0, label: 'Bronze' }
+        { rank: 1, relPos: 'center', color: '#FFD700', size: 190, border: 7, glow: 30 },
+        { rank: 2, relPos: 'left', color: '#C0C0C0', size: 160, border: 5, glow: 0 },
+        { rank: 3, relPos: 'right', color: '#CD7F32', size: 160, border: 5, glow: 0 }
     ];
 
-    const podiumYCenter = podiumY + 140;
-    const centerX = width / 2;
-    const sideOffset = 240;
+    const podiumContentY = podiumY + 230; // Center of avatars
+    const sideOffset = 260;
 
-    // Draw in order 2, 3, then 1 so 1 is on top if they overlap
-    const drawOrder = [1, 2, 0]; 
-    for (const idx of drawOrder) {
+    for (const idx of [1, 2, 0]) {
         const config = podiumConfigs[idx];
         const user = topUsers[idx];
         if (!user) continue;
 
-        let itemX = centerX;
-        if (config.relPos === 'left') itemX = centerX - sideOffset;
-        if (config.relPos === 'right') itemX = centerX + sideOffset;
-
+        const itemX = config.relPos === 'center' ? width / 2 : (config.relPos === 'left' ? width / 2 - sideOffset : width / 2 + sideOffset);
         const radius = config.size / 2;
         const member = guildMembers.get(user.userId);
         const avatarUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 512 }) : null;
 
-        // Draw Avatar with border and glow
         ctx.save();
-        if (config.glow > 0) {
-            ctx.shadowBlur = config.glow;
-            ctx.shadowColor = config.color;
-        }
-        
-        // Border
+        if (config.glow > 0) { ctx.shadowBlur = config.glow; ctx.shadowColor = config.color; }
         ctx.strokeStyle = config.color;
         ctx.lineWidth = config.border;
         ctx.beginPath();
-        ctx.arc(itemX, podiumYCenter, radius, 0, Math.PI * 2);
+        ctx.arc(itemX, podiumContentY, radius, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.shadowBlur = 0; // Reset
+        ctx.shadowBlur = 0;
 
-        // Clip for avatar
         ctx.beginPath();
-        ctx.arc(itemX, podiumYCenter, radius - config.border / 2, 0, Math.PI * 2);
+        ctx.arc(itemX, podiumContentY, radius - config.border / 2, 0, Math.PI * 2);
         ctx.clip();
 
         if (avatarUrl) {
             try {
                 const avatarImg = await loadImage(avatarUrl);
-                ctx.drawImage(avatarImg, itemX - radius, podiumYCenter - radius, config.size, config.size);
-            } catch (e) {
-                ctx.fillStyle = '#333';
-                ctx.fill();
-            }
-        } else {
-            ctx.fillStyle = '#333';
-            ctx.fill();
-        }
+                ctx.drawImage(avatarImg, itemX - radius, podiumContentY - radius, config.size, config.size);
+            } catch (e) { ctx.fillStyle = '#333'; ctx.fill(); }
+        } else { ctx.fillStyle = '#333'; ctx.fill(); }
         ctx.restore();
 
-        // Name and Time below
+        // Name & Time
         const displayName = member ? member.displayName : user.userId.slice(0, 8);
-        const mins = Math.floor(user.seconds / 60);
-
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px Cairo';
-        ctx.fillText(displayName, itemX, podiumYCenter + radius + 40);
-
+        ctx.font = 'bold 24px Cairo';
+        ctx.fillText(displayName, itemX, podiumContentY + radius + 35);
         ctx.fillStyle = config.color;
-        ctx.font = 'bold 20px Cairo';
-        ctx.fillText(`${mins}m`, itemX, podiumYCenter + radius + 65);
+        ctx.font = 'bold 22px Cairo';
+        ctx.fillText(`${Math.floor(user.seconds / 60)}m`, itemX, podiumContentY + radius + 65);
     }
 
-    // 5. USERS LIST CONTAINER (Rank 4+)
-    const listX = 60;
-    const listY = podiumY + podiumHeight + 30;
-    const listWidth = width - 120;
-    const listPadding = 20;
-    
-    const visibleUsers = topUsers.slice(3, 8); // Show up to 5 more
-    const itemHeight = 75;
-    const listHeight = visibleUsers.length > 0 ? (visibleUsers.length * itemHeight) + (listPadding * 2) : 0;
-
+    // 5. USERS LIST (Rank 4+)
     if (visibleUsers.length > 0) {
+        const listX = 60;
+        const listY = podiumY + podiumHeight + listMarginTop;
+        const listWidth = width - 120;
+
         ctx.fillStyle = 'rgba(80, 0, 120, 0.2)';
         ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
         ctx.lineWidth = 1;
@@ -403,8 +377,8 @@ async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUse
         for (let i = 0; i < visibleUsers.length; i++) {
             const user = visibleUsers[i];
             const rank = i + 4;
-            const itemY = listY + listPadding + (i * itemHeight);
             const itemX = listX + 20;
+            const itemY = listY + 20 + (i * itemHeight);
             const iWidth = listWidth - 40;
             const iHeight = itemHeight - 15;
             const isCurrentUser = currentUserId && user.userId === currentUserId;
@@ -418,36 +392,34 @@ async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUse
             ctx.fillStyle = itemGrad;
             ctx.strokeStyle = isCurrentUser ? '#00ff4c' : 'rgba(255, 215, 0, 0.1)';
             ctx.lineWidth = isCurrentUser ? 2 : 1;
-            
-            if (isCurrentUser) {
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#00ff4c';
-            }
-            
+            if (isCurrentUser) { ctx.shadowBlur = 10; ctx.shadowColor = '#00ff4c'; }
             roundRect(ctx, itemX, itemY, iWidth, iHeight, 15, true, true);
             ctx.restore();
 
+            // PERFECT HORIZONTAL ALIGNMENT (Middle Baseline)
+            const centerY = itemY + iHeight / 2;
+            ctx.textBaseline = 'middle';
+
             // Rank
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 22px Cairo';
+            ctx.font = 'bold 24px Cairo';
             ctx.textAlign = 'center';
-            ctx.fillText(rank.toString(), itemX + 35, itemY + iHeight / 2 + 8);
+            ctx.fillText(rank.toString(), itemX + 40, centerY);
 
-            // Avatar (small)
+            // Avatar
             const member = guildMembers.get(user.userId);
             const avUrl = member ? member.user.displayAvatarURL({ extension: 'png', size: 128 }) : null;
-            const avSize = 40;
-            const avX = itemX + 75;
-            const avY = itemY + (iHeight - avSize) / 2;
+            const avSize = 46;
+            const avX = itemX + 85;
 
             ctx.save();
             ctx.beginPath();
-            ctx.arc(avX + avSize/2, avY + avSize/2, avSize/2, 0, Math.PI * 2);
+            ctx.arc(avX + avSize/2, centerY, avSize/2, 0, Math.PI * 2);
             ctx.clip();
             if (avUrl) {
                 try {
                     const avImg = await loadImage(avUrl);
-                    ctx.drawImage(avImg, avX, avY, avSize, avSize);
+                    ctx.drawImage(avImg, avX, centerY - avSize/2, avSize, avSize);
                 } catch(e) { ctx.fillStyle = '#444'; ctx.fill(); }
             } else { ctx.fillStyle = '#444'; ctx.fill(); }
             ctx.restore();
@@ -455,21 +427,21 @@ async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUse
             // Name
             ctx.textAlign = 'left';
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px Cairo';
-            const displayName = member ? (member.displayName.length > 20 ? member.displayName.slice(0, 18) + '..' : member.displayName) : user.userId.slice(0, 12);
-            ctx.fillText(displayName, avX + avSize + 20, itemY + iHeight / 2 + 8);
+            ctx.font = 'bold 22px Cairo';
+            const name = member ? (member.displayName.length > 25 ? member.displayName.slice(0, 23) + '..' : member.displayName) : user.userId.slice(0, 12);
+            ctx.fillText(name, avX + avSize + 25, centerY);
 
-            // Time with Emoji
+            // Time
             ctx.textAlign = 'right';
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 18px Cairo';
-            const mins = Math.floor(user.seconds / 60);
-            ctx.fillText(`⏱️ ${mins}m`, itemX + iWidth - 25, itemY + iHeight / 2 + 8);
+            ctx.font = 'bold 20px Cairo';
+            ctx.fillText(`⏱️ ${Math.floor(user.seconds / 60)}m`, itemX + iWidth - 30, centerY);
         }
     }
 
     return canvas.toBuffer('image/png');
 }
+
 
 
 /**
