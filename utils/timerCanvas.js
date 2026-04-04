@@ -244,6 +244,21 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
 }
 
 async function drawLeaderboard(topUsers, guildMembers, guildId, currentUserId = null, themeData = {}) {
+    // Try to use new HTML renderer first (if Puppeteer is installed)
+    try {
+        const { renderLeaderboardScreenshot } = require('./leaderboardRenderer');
+        const screenshot = await renderLeaderboardScreenshot(topUsers, guildMembers, currentUserId);
+        return screenshot;
+    } catch (error) {
+        console.warn('⚠️ Puppeteer not available, falling back to Canvas rendering:', error.message);
+        return await drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUserId, themeData);
+    }
+}
+
+/**
+ * Canvas-based leaderboard renderer (fallback)
+ */
+async function drawLeaderboardCanvas(topUsers, guildMembers, guildId, currentUserId = null, themeData = {}) {
     // Responsive height
     const width = 1200;
     const baseHeight = 950;

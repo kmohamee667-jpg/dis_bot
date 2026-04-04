@@ -1,0 +1,202 @@
+/* Leaderboard CSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 1200px;
+    height: auto;
+    font-family: Cairo, Arial, sans-serif;
+    background-color: #0f0f1f;
+    overflow: hidden;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.container {
+    width: 1200px;
+    padding: 30px;
+    background-color: #0f0f1f;
+}
+
+.title {
+    text-align: center;
+    font-size: 36px;
+    font-weight: bold;
+    color: #FFD700;
+    margin-bottom: 30px;
+}
+
+/* ========== PODIUM SECTION ========== */
+.podium-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 40px;
+    background: rgba(103, 58, 183, 0.25);
+    border-radius: 0 0 25px 25px;
+    padding: 40px;
+    margin-bottom: 30px;
+    border: 2px solid rgba(147, 112, 219, 0.6);
+}
+
+.podium-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.podium-item.center {
+    order: 1;
+}
+
+.podium-item.left {
+    order: 0;
+}
+
+.podium-item.right {
+    order: 2;
+}
+
+.podium-item.center .avatar {
+    width: 180px;
+    height: 180px;
+    background: rgba(255, 215, 0, 0.4);
+    border: 8px solid #FFD700;
+    border-radius: 50%;
+}
+
+.podium-item.left .avatar,
+.podium-item.right .avatar {
+    width: 160px;
+    height: 160px;
+    background: rgba(192, 192, 192, 0.4);
+    border: 6px solid #C0C0C0;
+    border-radius: 50%;
+}
+
+.podium-item .icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.podium-item .avatar {
+    background-size: cover;
+    background-position: center;
+    margin-bottom: 15px;
+}
+
+.podium-item .name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 5px;
+}
+
+.podium-item.center .name {
+    font-size: 22px;
+}
+
+.podium-item .name.highlight {
+    color: #00FF00;
+    font-weight: 900;
+}
+
+.podium-item .time {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.podium-item.center .time {
+    color: #FFD700;
+}
+
+.podium-item.left .time {
+    color: #C0C0C0;
+}
+
+.podium-item.right .time {
+    color: #CD7F32;
+}
+
+/* ========== USERS LIST ========== */
+.users-container {
+    background: rgba(103, 58, 183, 0.15);
+    border-radius: 25px 25px 0 0;
+    border: 2px solid rgba(147, 112, 219, 0.4);
+    padding: 20px;
+}
+
+.user-item {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin-bottom: 8px;
+    height: 70px;
+    gap: 15px;
+}
+
+.user-item.highlight {
+    background: rgba(0, 255, 0, 0.15);
+    border: 2px solid #00FF00;
+}
+
+.user-rank {
+    font-size: 20px;
+    font-weight: bold;
+    color: #FFD700;
+    text-align: center;
+    width: 40px;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+}
+
+.user-info {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-name {
+    font-size: 15px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.user-name.highlight {
+    color: #00FF00;
+    font-size: 16px;
+}
+
+.user-time {
+    font-size: 14px;
+    color: #cccccc;
+}
+
+.user-time.highlight {
+    color: #00FF00;
+    font-weight: bold;
+}
