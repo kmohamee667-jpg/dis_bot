@@ -1,5 +1,6 @@
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 const { isAdmin } = require('../utils/admin-check');
+const { getPermissionsSync } = require('../utils/configDb');
 const { logAction } = require('../utils/logger');
 const timerManager = require('../utils/timerManager');
 
@@ -100,6 +101,151 @@ module.exports = {
                     { name: '🛡️ رسائل محمية (تايمر)', value: `\`${protectedIds.size}\``, inline: true },
                 ]
             }).catch(() => {});
+
+            if (message.deletable) await message.delete().catch(() => {});
+        }
+
+        // ─── Keyword: قفل ──────────────────────────────────────────────
+        if (content === 'قفل') {
+            if (!await isAdmin(message, 'قفل')) {
+                const denyMsg = await message.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription("❌ ليس لديك صلاحية لاستخدام هذا الأمر.")
+                            .setColor('#E74C3C')
+                    ]
+                }).catch(() => null);
+                if (denyMsg) setTimeout(() => denyMsg.delete().catch(() => {}), 4000);
+                return;
+            }
+
+            try {
+                // 1. Get all authorized roles/users for 'قفل' to allow bypass
+                const perms = getPermissionsSync('قفل');
+                const overwrites = [];
+
+                // Always deny @everyone
+                overwrites.push({
+                    id: message.guild.roles.everyone.id,
+                    deny: ['SendMessages']
+                });
+
+                if (perms) {
+                    // Roles bypass
+                    for (const roleVal of perms.roles) {
+                        const role = message.guild.roles.cache.find(r => r.name === roleVal || r.id === roleVal);
+                        if (role) {
+                            overwrites.push({
+                                id: role.id,
+                                allow: ['SendMessages']
+                            });
+                        }
+                    }
+
+                    // Users bypass
+                    for (const userVal of perms.users) {
+                        const member = message.guild.members.cache.find(m => m.id === userVal || m.user.username === userVal);
+                        if (member) {
+                            overwrites.push({
+                                id: member.id,
+                                allow: ['SendMessages']
+                            });
+                        }
+                    }
+                }
+
+                // Apply overwrites
+                for (const ov of overwrites) {
+                    await message.channel.permissionOverwrites.edit(ov.id, {
+                        SendMessages: ov.allow?.includes('SendMessages') ? true : false
+                    }).catch(err => console.error(`[قفل] Failed to set overwrite for ${ov.id}:`, err));
+                }
+
+                const lockEmbed = new EmbedBuilder()
+                    .setTitle('🔒 قفل القناة')
+                    .setDescription(`تم قفل القناة بواسطة: ${message.author}\n**يمنع إرسال الرسائل للأعضاء، ويسمح للإدارة فقط.**`)
+                    .setColor('#E74C3C')
+                    .setFooter({ text: 'Galaxy Moderation System' })
+                    .setTimestamp();
+
+                await message.channel.send({ embeds: [lockEmbed] });
+
+                await logAction(client, message.guildId, {
+                    title: '🔒 قفل القناة',
+                    color: '#E74C3C',
+                    user: message.author,
+                    fields: [{ name: '📺 القناة', value: `<#${message.channelId}>`, inline: true }]
+                });
+
+                if (message.deletable) await message.delete().catch(() => {});
+            } catch (e) {
+                console.error('[قفل] Error:', e);
+                await message.reply('❌ فشل قفل القناة. تأكد من صلاحيات البوت.').catch(() => {});
+            }
+        }
+
+        // ─── Keyword: فتح ──────────────────────────────────────────────
+        if (content === 'فتح') {
+            if (!await isAdmin(message, 'قفل')) {
+                const denyMsg = await message.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setDescription("❌ ليس لديك صلاحية لاستخدام هذا الأمر.")
+                            .setColor('#E74C3C')
+                    ]
+                }).catch(() => null);
+                if (denyMsg) setTimeout(() => denyMsg.delete().catch(() => {}), 4000);
+                return;
+            }
+
+            try {
+                // 1. Reset @everyone
+                await message.channel.permissionOverwrites.edit(message.guild.roles.everyone, {
+                    SendMessages: true
+                });
+
+                // 2. Reset Admin Bypass
+                const perms = getPermissionsSync('قفل');
+                if (perms) {
+                    for (const roleVal of perms.roles) {
+                        const role = message.guild.roles.cache.find(r => r.name === roleVal || r.id === roleVal);
+                        if (role) {
+                            await message.channel.permissionOverwrites.edit(role.id, {
+                                SendMessages: null
+                            }).catch(() => {});
+                        }
+                    }
+                    for (const userVal of perms.users) {
+                        const member = message.guild.members.cache.find(m => m.id === userVal || m.user.username === userVal);
+                        if (member) {
+                            await message.channel.permissionOverwrites.edit(member.id, {
+                                SendMessages: null
+                            }).catch(() => {});
+                        }
+                    }
+                }
+
+                const unlockEmbed = new EmbedBuilder()
+                    .setTitle('🔓 فتح القناة')
+                    .setDescription(`تم فتح القناة بواسطة: ${message.author}\n**يمكن للجميع إرسال الرسائل الآن.**`)
+                    .setColor('#2ECC71')
+                    .setFooter({ text: 'Galaxy Moderation System' })
+                    .setTimestamp();
+
+                await message.channel.send({ embeds: [unlockEmbed] });
+
+                await logAction(client, message.guildId, {
+                    title: '🔓 فتح القناة',
+                    color: '#2ECC71',
+                    user: message.author,
+                    fields: [{ name: '📺 القناة', value: `<#${message.channelId}>`, inline: true }]
+                });
+
+                if (message.deletable) await message.delete().catch(() => {});
+            } catch (e) {
+                console.error('[فتح] Error:', e);
+                await message.reply('❌ فشل فتح القناة. تأكد من صلاحيات البوت.').catch(() => {});
+            }
         }
     }
 };
