@@ -189,7 +189,7 @@ module.exports = {
                         await interaction.deferUpdate().catch(() => {});
                     }
 
-                    timerManager.stopTimer(channelId);
+                    timerManager.stopTimer(channelId, interaction.client);
                     if (timer.intervalId) clearInterval(timer.intervalId);
 
                     if (timer.messageId) {
@@ -238,11 +238,14 @@ module.exports = {
 
                 timer.waitingContinue = false;
                 timer.status = 'running';
+                // Note: Incrementing cycle and setting modes is now mostly handled in heartbeat 
+                // when status becomes 'running' OR we can do it here for immediate effect.
+                // For manual mode, we should set it up precisely:
                 timer.currentCycle += 1;
                 timer.mode = 'study';
                 timer.totalTime = timer.studyTime;
                 timer.timeLeft = timer.studyTime;
-                timer.cycleParticipants = {};
+                timer.lastUpdate = Date.now();
 
                 if (timer.continueMessageId) {
                     const contMsg = await interaction.channel.messages.fetch(timer.continueMessageId).catch(() => null);

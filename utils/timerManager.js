@@ -17,6 +17,7 @@ class TimerManager {
         data.lastUpdate = Date.now();
         data.status = data.status || 'running';
         data.starterName = data.starterName || 'System';
+        data.isLocked = false;
         this.activeTimers.set(channelId, data);
 
         // ✅ حفظ التايمر في قاعدة البيانات
@@ -37,7 +38,11 @@ class TimerManager {
             .slice(0, topN);
     }
 
-    stopTimer(channelId) {
+    stopTimer(channelId, client = null) {
+        const timer = this.activeTimers.get(channelId);
+        if (timer && client) {
+            this.lockChannel(client, timer, false).catch(() => {});
+        }
         this.activeTimers.delete(channelId);
         
         // ✅ حذف التايمر من قاعدة البيانات
@@ -67,9 +72,29 @@ class TimerManager {
         }
     }
 
+    async lockChannel(client, timer, lock) {
+        if (!client || !timer || !timer.textChannelId) return;
+        const channel = client.channels.cache.get(timer.textChannelId);
+        if (!channel) return;
+
+        try {
+            const guild = channel.guild;
+            const everyone = guild.roles.everyone;
+            await channel.permissionOverwrites.edit(everyone, { SendMessages: !lock });
+            timer.isLocked = lock;
+        } catch (e) {
+            console.error('Failed to update channel permissions:', e.message);
+        }
+    }
+
     async tick(channelId, voiceChannel = null) {
         const timer = this.activeTimers.get(channelId);
         if (!timer) return;
+
+        // Perform initial lock if just started
+        if (timer.mode === 'study' && !timer.isLocked && timer.status === 'running' && voiceChannel) {
+            await this.lockChannel(voiceChannel.client, timer, true);
+        }
 
         const now = Date.now();
         const delta = Math.floor((now - timer.lastUpdate) / 1000);
@@ -154,6 +179,7 @@ class TimerManager {
                         timer.timeLeft = timer.breakTime;
                         timer.status = 'running';
                         await this.updateCycleInDb(channelId, timer.currentCycle, 'break');
+                        await this.lockChannel(client, timer, false); // Unlock during break
 
                         // Challenge Summary Reporting
                         if (timer.isChallenge) {
@@ -180,6 +206,7 @@ class TimerManager {
                             timer.timeLeft = timer.studyTime;
                             timer.status = 'running';
                             await this.updateCycleInDb(channelId, timer.currentCycle, 'study');
+                            await this.lockChannel(client, timer, true); // Relock for study
 
                             if (textChannel) {
                                 const nextCycleEmbed = new EmbedBuilder()
@@ -255,25 +282,22 @@ class TimerManager {
         const textChannel = client.channels.cache.get(timer.textChannelId);
         const guild = client.guilds.cache.get(timer.guildId);
 
+        await this.lockChannel(client, timer, false); // Unlock channel at end
         this.stopTimer(channelId);
 
         if (!textChannel || !guild) return;
 
-        // Challenge Summary (Final Update to Top 3 Channel)
-        if (timer.isChallenge) {
-            await this.updateChallengeSummary(client, timer, { cycle: timer.totalCycles, cycleLeaders: [] }, true);
-        }
-
-        // Distribute Rewards (Challenge only)
+        // Rewards Distribution logic
         let rewardMessage = '';
-        if (timer.top3_prize || timer.top10_prize) {
-            const sorted = Object.entries(timer.participants || {})
-                .map(([userId, seconds]) => ({ userId, seconds }))
-                .sort((a, b) => b.seconds - a.seconds);
+        const sorted = Object.entries(timer.participants || {})
+            .map(([userId, seconds]) => ({ userId, seconds }))
+            .sort((a, b) => b.seconds - a.seconds);
 
-            const top3 = sorted.slice(0, 3);
-            const top10 = sorted.slice(3, 13); // Positions 4-13
+        const top3 = sorted.slice(0, 3);
+        const top10 = sorted.slice(3, 13);
+        const allWinners = [...top3, ...top10];
 
+        if (timer.isChallenge) {
             if (timer.top3_prize && top3.length > 0) {
                 const prize = await this.distributePrize(guild, top3, timer.top3_prize);
                 rewardMessage += `🏆 **مبروك للتوب 3 لحصولكم علي جائزه (${prize})!**\n${top3.map(u => `<@${u.userId}>`).join(' ')}\n\n`;
@@ -283,6 +307,10 @@ class TimerManager {
                 const prize = await this.distributePrize(guild, top10, timer.top10_prize);
                 rewardMessage += `🎖️ **مبروك للتوب 10 لحصولكم علي جائزه (${prize})!**\n${top10.map(u => `<@${u.userId}>`).join(' ')}\n\n`;
             }
+
+            // Challenge Summary (Final Update with mentions and branding)
+            const voiceName = client.channels.cache.get(channelId)?.name || 'الروم الصوتي';
+            await this.updateChallengeSummary(client, timer, { cycle: timer.totalCycles, cycleLeaders: [], winners: allWinners, voiceName }, true);
         }
 
         // Leaderboard Image
@@ -303,7 +331,7 @@ class TimerManager {
     }
 
     async updateChallengeSummary(client, timer, cycleDoneInfo = null, final = false) {
-        const CHALLENGE_SUMMARY_CHANNEL = '1487708777678635048';
+        const CHALLENGE_SUMMARY_CHANNEL = '1489993576824705074';
         const channel = client.channels.cache.get(CHALLENGE_SUMMARY_CHANNEL) || await client.channels.fetch(CHALLENGE_SUMMARY_CHANNEL).catch(() => null);
         if (!channel) return;
 
@@ -324,12 +352,20 @@ class TimerManager {
             )
             .setTimestamp();
 
+        let content = null;
+        if (final && cycleDoneInfo?.winners) {
+            content = `👑 **دول الي فازو في التحدي الي كان ف فويس (${cycleDoneInfo.voiceName})**\n` +
+                      `${cycleDoneInfo.winners.map(u => `<@${u.userId}>`).join(' ')}\n\n` +
+                      `بالتوفيق ديما ومستنينكو في تحدي جديد 🚀\n\n` +
+                      `-# Galaxy server`;
+        }
+
         try {
             if (timer.challengeSummaryMessageId) {
                 const msg = await channel.messages.fetch(timer.challengeSummaryMessageId).catch(() => null);
-                if (msg) return await msg.edit({ embeds: [embed] }).catch(() => null);
+                if (msg) return await msg.edit({ content, embeds: [embed] }).catch(() => null);
             }
-            const newMsg = await channel.send({ embeds: [embed] }).catch(() => null);
+            const newMsg = await channel.send({ content, embeds: [embed] }).catch(() => null);
             if (newMsg) {
                 timer.challengeSummaryMessageId = newMsg.id;
                 db.saveTimer(timer).catch(() => {});
@@ -402,6 +438,7 @@ class TimerManager {
                     startTime: saved.start_time,
                     status: saved.paused_time ? 'paused' : 'running',
                     isChallenge: (saved.top3_prize || saved.top10_prize) ? true : false,
+                    isLocked: false, // Reset lock state on restore
                     participants: {},
                     participantNames: {},
                     participantAvatars: {},

@@ -68,9 +68,14 @@ async function drawTimer(timerData, themeData = {}) {
     ctx.textAlign = 'left';
     ctx.fillText('👥 Active members', listX + 25, listY + 50);
 
-    // Display Members (3-Column Grid - SORTED)
+    // Display Members (3-Column Grid - SORTED by Active then Time)
     const sortedParticipants = Object.entries(timerData.participants)
-        .sort(([, timeA], [, timeB]) => timeB - timeA);
+        .sort(([idA, timeA], [idB, timeB]) => {
+            const activeA = timerData.currentParticipants.has(idA) ? 1 : 0;
+            const activeB = timerData.currentParticipants.has(idB) ? 1 : 0;
+            if (activeA !== activeB) return activeB - activeA;
+            return timeB - timeA;
+        });
 
     const colCount = 3;
     const itemHeight = 60;
