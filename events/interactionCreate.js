@@ -37,6 +37,23 @@ module.exports = {
             const command = interaction.client.commands.get(interaction.commandName);
             if (!command) return;
 
+            // ✅ Global Database Permission Check for Administrative Commands
+            // Check if the command requires Administrator permission in Discord OR is specifically marked
+            const { PermissionFlagsBits } = require('discord.js');
+            const defaultPerms = command.data.default_member_permissions;
+            const isAdminCommand = defaultPerms && (BigInt(defaultPerms) & PermissionFlagsBits.Administrator) !== 0n;
+
+            if (isAdminCommand || command.adminOnly) {
+                const { isAdmin } = require('../utils/admin-check');
+                const hasPerm = await isAdmin(interaction, interaction.commandName);
+                if (!hasPerm) {
+                    return await interaction.reply({
+                        content: '❌ **لا تملك صلاحية لاستخدام هذا الأمر.**\nهذا الأمر مخصص للإدارة وتم التحقق من صلاحيتك في قاعدة البيانات.',
+                        flags: [MessageFlags.Ephemeral]
+                    }).catch(() => {});
+                }
+            }
+
             try {
                 await command.execute(interaction);
 
@@ -176,7 +193,7 @@ module.exports = {
 
                     const { isAdmin } = require('../utils/admin-check');
                     const isStarter = interaction.user.id === timer.starterId;
-                    const hasStopPerm = isAdmin(interaction, 'timer-stop');
+                    const hasStopPerm = await isAdmin(interaction, 'timer-stop');
 
                     if (!isStarter && !hasStopPerm) {
                         if (interaction.isRepliable()) {
@@ -230,7 +247,7 @@ module.exports = {
 
                 const { isAdmin } = require('../utils/admin-check');
                 const isStarter = interaction.user.id === timer.starterId;
-                const hasContinuePerm = isAdmin(interaction, 'challenge-continue');
+                const hasContinuePerm = await isAdmin(interaction, 'challenge-continue');
 
                 if (!isStarter && !hasContinuePerm) {
                     return await interaction.reply({ content: '❌ ليس لديك صلاحية استكمال الدورة.', flags: [MessageFlags.Ephemeral] }).catch(() => {});

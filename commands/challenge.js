@@ -3,7 +3,6 @@ const timerManager = require('../utils/timerManager');
 const { validateGuild } = require('../utils/guildValidator');
 const { drawTimer } = require('../utils/timerCanvas');
 const { getThemeChoices } = require('../utils/themesDb');
-const { isAdmin } = require('../utils/admin-check');
 
 const CHALLENGE_SUMMARY_CHANNEL = '1489993576824705074';
 
@@ -74,10 +73,6 @@ module.exports = {
     async execute(interaction) {
         // ✅ التحقق من Guild ID
         if (!await validateGuild(interaction)) return;
-
-        if (!isAdmin(interaction, 'challenge')) {
-            return await interaction.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.', flags: [MessageFlags.Ephemeral] });
-        }
 
         const voiceChannel = interaction.member.voice.channel;
         if (!voiceChannel) {

@@ -42,7 +42,7 @@ module.exports = {
             let targetUser = interaction.options.getUser('user') || interaction.user;
 
             if (targetUser.id !== interaction.user.id) {
-                if (!isAdmin(interaction, 'coins')) {
+                if (!await isAdmin(interaction, 'coins')) {
                     return await interaction.editReply({
                         content: '❌ You don\'t have permission to view other users\' balance.',
                         flags: [MessageFlags.Ephemeral]

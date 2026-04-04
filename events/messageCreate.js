@@ -24,7 +24,7 @@ module.exports = {
             }
 
             // 1. Permission check
-            if (!isAdmin(message, 'مسح')) {
+            if (!await isAdmin(message, 'مسح')) {
                 const denyMsg = await message.reply({
                     embeds: [
                         new EmbedBuilder()

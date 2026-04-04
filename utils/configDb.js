@@ -51,10 +51,48 @@ async function subscribeToPermissions() {
     supabase
         .channel('public:command_permissions')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'command_permissions' }, (payload) => {
-            console.log('🔄 Permissions changed in DB (Realtime)! Reloading...');
+            const { eventType, new: newRecord, old: oldRecord } = payload;
+            
+            console.log(`\n🔔 [DB CHANGE DETECTED] Event: ${eventType}`);
+            
+            if (eventType === 'INSERT') {
+                console.log(`   ➕ ADDED: ${newRecord.command_name} -> ${newRecord.type}: ${newRecord.value}`);
+            } else if (eventType === 'DELETE') {
+                console.log(`   ➖ REMOVED: ${oldRecord.command_name ? oldRecord.command_name : 'Record'} (ID: ${oldRecord.id})`);
+            } else if (eventType === 'UPDATE') {
+                console.log(`   📝 UPDATED: ${newRecord.command_name} -> ${newRecord.type}: ${newRecord.value}`);
+            }
+
+            console.log('   🔄 Refreshing permissions cache...');
             loadPermissions();
         })
-        .subscribe();
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('🔌 Realtime Sync: Listening for command_permissions changes...');
+            }
+        });
+}
+
+/**
+ * Checks permission DIRECTLY in Supabase (Live check).
+ */
+async function checkPermissionLive(commandName, userId, username, roles, roleIds) {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+        .from('command_permissions')
+        .select('*')
+        .eq('command_name', commandName);
+
+    if (error || !data) return false;
+
+    const lowerRoles = (roles || []).map(r => r.toLowerCase());
+    const finalRoleIds = roleIds || [];
+
+    return data.some(p => {
+        if (p.type === 'user') return p.value === userId || p.value === username;
+        if (p.type === 'role') return lowerRoles.includes(p.value.toLowerCase()) || finalRoleIds.includes(p.value);
+        return false;
+    });
 }
 
 function getPermissionsSync(commandName) {
@@ -86,4 +124,4 @@ async function removePermission(commandName, type, value) {
     await loadPermissions();
 }
 
-module.exports = { loadPermissions, subscribeToPermissions, getPermissionsSync, addPermission, removePermission };
+module.exports = { loadPermissions, subscribeToPermissions, checkPermissionLive, getPermissionsSync, addPermission, removePermission };

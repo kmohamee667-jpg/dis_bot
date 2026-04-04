@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const shopDb = require('../utils/shopDb');
 const { validateGuild } = require('../utils/guildValidator');
-const { isAdmin } = require('../utils/admin-check');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,13 +14,6 @@ module.exports = {
     async execute(interaction) {
         // ✅ التحقق من Guild ID
         if (!await validateGuild(interaction)) return;
-
-        if (!isAdmin(interaction, 'add-role')) {
-            return await interaction.reply({
-                content: '❌ You don\'t have permission to use this command.',
-                flags: [MessageFlags.Ephemeral]
-            });
-        }
 
         const role = interaction.options.getRole('role');
         const price = interaction.options.getInteger('price');

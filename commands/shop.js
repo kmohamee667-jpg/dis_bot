@@ -20,7 +20,7 @@ module.exports = {
         const subcommand = interaction.options.getSubcommand();
 
         if (subcommand === 'setup') {
-            if (!isAdmin(interaction, 'shop-setup')) {
+            if (!await isAdmin(interaction, 'shop-setup')) {
                 return await interaction.reply({
                     content: '❌ You don\'t have permission to use this command.',
                     flags: [MessageFlags.Ephemeral]

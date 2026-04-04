@@ -11,7 +11,6 @@ try {
     console.warn('Cairo fonts missing for give command.');
 }
 
-const { isAdmin } = require('../utils/admin-check');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -29,13 +28,6 @@ module.exports = {
     async execute(interaction) {
         // ✅ التحقق من Guild ID
         if (!await validateGuild(interaction)) return;
-
-        if (!isAdmin(interaction, 'give')) {
-            return await interaction.reply({
-                content: '❌ You don\'t have permission to use this command.',
-                flags: [MessageFlags.Ephemeral]
-            });
-        }
 
         await interaction.deferReply();
 
@@ -57,7 +49,10 @@ module.exports = {
         for (const u of users) {
             if (seenIds.has(u.id)) continue;
             if (u.bot) continue;
-            if (u.id === interaction.user.id && !isAdmin(interaction, 'give')) continue;
+            if (u.id === interaction.user.id) {
+                // Admins can give coins to themselves and others.
+                // (No restriction needed here since they are verified globally)
+            }
             targetUsers.push(u);
             seenIds.add(u.id);
         }

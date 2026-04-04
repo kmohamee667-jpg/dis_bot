@@ -14,7 +14,7 @@ module.exports = {
         // ✅ التحقق من Guild ID
         if (!await validateGuild(interaction)) return;
 
-        if (!isAdmin(interaction, 'top-time')) {
+        if (!await isAdmin(interaction, 'top-time')) {
             return await interaction.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.', flags: [MessageFlags.Ephemeral] });
         }
 
