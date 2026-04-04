@@ -54,9 +54,10 @@ async function drawTimer(timerData, themeData = {}) {
     const listX = 40;
     const listY = 40;
     const listHeight = height - 80;
+    const listBgColor = themeData.listBgColor || 'rgba(103, 58, 183, 0.25)';
 
-    // Draw the purple glassmorphism box
-    ctx.fillStyle = 'rgba(103, 58, 183, 0.25)'; // Semi-transparent Purple
+    // Draw the glassmorphism box with theme color
+    ctx.fillStyle = listBgColor;
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 2;
     roundRect(ctx, listX, listY, listWidth, listHeight, 20, true, true);

@@ -30,7 +30,8 @@ async function loadThemes() {
             emoji: row.emoji || '',
             path: row.path,
             color: row.color,
-            circleColor: row.circle_color
+            circleColor: row.circle_color,
+            listBgColor: row.list_bg_color || 'rgba(103, 58, 183, 0.25)'
         };
     });
 

@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS themes (
     emoji        TEXT,
     path         TEXT NOT NULL,
     color        TEXT NOT NULL DEFAULT '#333333',
-    circle_color TEXT NOT NULL DEFAULT '#3498db'
+    circle_color TEXT NOT NULL DEFAULT '#3498db',
+    list_bg_color TEXT NOT NULL DEFAULT 'rgba(103, 58, 183, 0.25)'
 );
 
 CREATE TABLE IF NOT EXISTS command_permissions (
