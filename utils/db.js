@@ -109,6 +109,7 @@ async function saveTimer(timerData) {
             .from('timer')
             .upsert({
                 channel_id: timerData.channelId,
+                text_channel_id: timerData.textChannelId,
                 guild_id: timerData.guildId,
                 starter_id: timerData.starterId,
                 starter_name: timerData.starterName,
@@ -119,6 +120,8 @@ async function saveTimer(timerData) {
                 theme_key: timerData.themeKey,
                 mode: timerData.mode,
                 update_mode: timerData.updateMode,
+                top3_prize: timerData.top3_prize || null,
+                top10_prize: timerData.top10_prize || null,
                 start_time: timerData.startTime,
                 paused_time: timerData.pausedTime || null,
                 status: timerData.status,

@@ -71,7 +71,9 @@ module.exports = {
                 .setAutocomplete(true)
         )
         .addStringOption(option => option.setName('cycle_mode').setDescription('وضع السايكل').setRequired(true).addChoices({ name: 'تشغيل متواصل', value: 'auto' }, { name: 'انتظار استكمال يدوي', value: 'manual' }))
-        .addStringOption(option => option.setName('update_mode').setDescription('طريقة تحديث رسالة التايمر').addChoices({ name: 'تحديث نفس الرسالة', value: 'edit' }, { name: 'إرسال رسالة جديدة', value: 'new' })),
+        .addStringOption(option => option.setName('update_mode').setDescription('طريقة تحديث رسالة التايمر').addChoices({ name: 'تحديث نفس الرسالة', value: 'edit' }, { name: 'إرسال رسالة جديدة', value: 'new' }))
+        .addStringOption(option => option.setName('top3_prize').setDescription('جائزة التوب 3 (كوينز أو رول)'))
+        .addStringOption(option => option.setName('top10_prize').setDescription('جائزة التوب 10 (كوينز أو رول)')),
 
 
     async execute(interaction) {
@@ -91,7 +93,7 @@ module.exports = {
             return await interaction.reply({ content: '⚠️ هناك تحدي/تايمر يعمل حاليًا في هذه الغرفة.', flags: [MessageFlags.Ephemeral] });
         }
 
-        await interaction.deferReply();
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
         const studyTime = interaction.options.getInteger('study_time');
         const breakTime = interaction.options.getInteger('break_time');
@@ -99,12 +101,13 @@ module.exports = {
         const themeKey = interaction.options.getString('theme');
         const updateMode = interaction.options.getString('update_mode') || 'edit';
         const cycleMode = interaction.options.getString('cycle_mode') || 'auto';
-        const theme = await require('../utils/themesDb').getTheme(themeKey);
-
+        const top3_prize = interaction.options.getString('top3_prize');
+        const top10_prize = interaction.options.getString('top10_prize');
 
         const timerData = {
             guildId: interaction.guildId,
             channelId: voiceChannel.id,
+            textChannelId: interaction.channelId,
             starterId: interaction.user.id,
             starterName: interaction.member.displayName || interaction.user.username,
             studyTime: studyTime * 60,
@@ -118,15 +121,16 @@ module.exports = {
             totalCycles,
             themeKey,
             cycleMode,
+            top3_prize,
+            top10_prize,
+            isChallenge: true,
             waitingContinue: false,
             challengeSummaryMessageId: null,
-            cycleParticipants: {},
-            challengeCycleResults: [],
             participantNames: {},
             participantAvatars: {},
             currentParticipants: new Set(),
             messageId: null,
-            interactionToken: interaction.token
+            startTime: Date.now()
         };
 
         voiceChannel.members.forEach(member => {
@@ -137,153 +141,11 @@ module.exports = {
         });
 
         timerManager.startTimer(voiceChannel.id, timerData);
-        voiceChannel.members.forEach(member => {
-            if (!member.user.bot) timerManager.addParticipant(voiceChannel.id, member.id);
-        });
 
-        let lastManualRefresh = 0;
-
-        const renderAndSend = async () => {
-            const currentTimer = timerManager.getTimer(voiceChannel.id);
-            if (!currentTimer) return;
-
-            const buffer = await drawTimer(currentTimer, theme || {});
-            const attachment = new AttachmentBuilder(buffer, { name: 'timer.png' });
-
-            const totalStudySeconds = Object.values(currentTimer.participants || {}).reduce((sum, s) => sum + (s || 0), 0);
-            const totalStudyFormatted = `${Math.floor(totalStudySeconds / 60)}m ${totalStudySeconds % 60}s`;
-
-            const topParticipants = Object.entries(currentTimer.participants || {})
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 3)
-                .map(([userId, seconds], idx) => `**${idx + 1}.** <@${userId}> - ${Math.floor(seconds / 60)}m ${seconds % 60}s`)
-                .join('\n') || '*لا يوجد بيانات*';
-
-            const embed = new EmbedBuilder()
-                .setTitle('⏳ تحدي المذاكرة نشط')
-                .setDescription(`> تحدي في غرفة <#${voiceChannel.id}> \n> الوضع: **${cycleMode === 'auto' ? 'متواصل' : 'منتظر استكمال'}**`)
-                .setColor('#673ab7')
-                .setImage('attachment://timer.png')
-                .addFields(
-                    { name: '👤 المنظم', value: `\`${timerData.starterName}\``, inline: true },
-                    { name: '🎭 الثيم', value: `\`${theme.name || 'Default'}\``, inline: true },
-                    { name: '🔄 الدورة', value: `\`${currentTimer.currentCycle}/${currentTimer.totalCycles}\``, inline: true },
-                    { name: '⏱️ المرحلة', value: `\`${currentTimer.mode}\``, inline: true },
-                    { name: '🕒 Study Time', value: `\`${totalStudyFormatted}\``, inline: true },
-                    { name: '💰 عروض الكوينز (Top 3)', value: topParticipants, inline: false }
-                )
-                .setFooter({ text: 'Challenge Timer System', iconURL: interaction.client.user.displayAvatarURL() })
-                .setTimestamp();
-
-            const stopButton = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`timer_stop_${voiceChannel.id}`).setLabel('إيقاف التحدي').setStyle(ButtonStyle.Danger)
-            );
-
-            if (!currentTimer.messageId) {
-                const msg = await interaction.editReply({ embeds: [embed], files: [attachment], components: [stopButton] });
-                currentTimer.messageId = msg.id;
-            } else if (currentTimer.updateMode === 'new') {
-                try {
-                    const oldMsg = await interaction.channel.messages.fetch(currentTimer.messageId);
-                    if (oldMsg) await oldMsg.delete();
-                } catch (e) {}
-
-                const newMsg = await interaction.channel.send({ embeds: [embed], files: [attachment], components: [stopButton] });
-                currentTimer.messageId = newMsg.id;
-            } else {
-                await interaction.editReply({ embeds: [embed], files: [attachment], components: [stopButton] }).catch(() => {});
-            }
-        };
-
-        timerData.refreshCallback = async () => {
-            const now = Date.now();
-            if (now - lastManualRefresh < 3000) return;
-            lastManualRefresh = now;
-            await renderAndSend();
-        };
-
+        await interaction.editReply({ content: '🚀 تم بدء التحدي بنجاح! سيتم توزيع الجوائز فور الانتهاء.' });
+        
+        // Initial render and summary
+        await timerManager.refreshTimerMessage(interaction.client, voiceChannel.id);
         await updateChallengeSummary(interaction.client, timerData, null, false);
-        await renderAndSend();
-
-        const intervalId = setInterval(async () => {
-            const timer = timerManager.getTimer(voiceChannel.id);
-            if (!timer) {
-                clearInterval(intervalId);
-                return;
-            }
-
-            if (timer.status !== 'running') return;
-
-            timerManager.tick(voiceChannel.id, voiceChannel);
-
-            if (timer.status === 'finished') {
-                if (timer.mode === 'study') {
-                    const cycle = timer.currentCycle;
-                    const cycleScores = Object.entries(timer.cycleParticipants || {}).map(([userId, seconds]) => ({ userId, seconds }));
-                    const cycleSorted = cycleScores.sort((a, b) => b.seconds - a.seconds).slice(0, 3);
-
-                    timer.challengeCycleResults.push({ cycle, top3: cycleSorted });
-
-                    await updateChallengeSummary(interaction.client, timer, { cycle, cycleLeaders: cycleSorted }, false);
-
-                    // Switch to break phase (no per-cycle channel log, final summary at end)
-                    timer.mode = 'break';
-                    timer.totalTime = timer.breakTime;
-                    timer.timeLeft = timer.breakTime;
-                    timer.status = 'running';
-                    timer.cycleParticipants = {};
-
-                } else if (timer.mode === 'break') {
-                    if (timer.currentCycle < timer.totalCycles) {
-                        if (timer.cycleMode === 'auto') {
-                            timer.currentCycle += 1;
-                            timer.mode = 'study';
-                            timer.totalTime = timer.studyTime;
-                            timer.timeLeft = timer.studyTime;
-                            timer.status = 'running';
-                            timer.cycleParticipants = {};
-                        } else {
-                            timer.status = 'paused';
-                            timer.waitingContinue = true;
-
-                            const continueButton = new ActionRowBuilder().addComponents(
-                                new ButtonBuilder().setCustomId(`timer_continue_${voiceChannel.id}`).setLabel('استكمال الدورة التالية').setStyle(ButtonStyle.Success)
-                            );
-
-                            const continueMsg = await interaction.channel.send({ content: `⏸️ التحدي متوقف الآن حتى يقوم مشرف (أو المصرح له) بالضغط على الاستكمال.`, components: [continueButton] });
-                            timer.continueMessageId = continueMsg.id;
-                        }
-                    } else {
-                        // Challenge complete
-                        clearInterval(intervalId);
-                        timerManager.stopTimer(voiceChannel.id);
-
-                        await updateChallengeSummary(interaction.client, timer, { cycle: timer.currentCycle, cycleLeaders: [] }, true);
-
-                        const overallSorted = Object.entries(timer.participants).map(([userId, seconds]) => ({ userId, seconds })).sort((a, b) => b.seconds - a.seconds).slice(0, 3);
-                        const finalWinners = overallSorted.length > 0 ? overallSorted.map((entry, idx) => `**${idx + 1}.** <@${entry.userId}> (${Math.floor(entry.seconds / 60)}m ${entry.seconds % 60}s)`).join('\n') : '*لا يوجد بيانات*';
-
-                        await interaction.channel.send({ embeds: [
-                            new EmbedBuilder()
-                                .setTitle('🏆 تم الانتهاء من التحدي!')
-                                .setDescription(`🎉 تهانينا، انتهت جميع ${timer.totalCycles} دورات.`)
-                                .addFields({ name: '🥇 الأوائل على التحدي كامل', value: finalWinners })
-                                .setColor('#2ECC71')
-                        ], content: `<#${voiceChannel.id}>` });
-                    }
-                }
-
-                await renderAndSend().catch(() => {});
-            }
-
-            // Refresh visual every 15s and near end
-            if (timer.status === 'running' && (timer.timeLeft % 15 === 0 || timer.timeLeft < 5)) {
-                await renderAndSend().catch(() => {});
-            }
-
-        }, 1000);
-
-        timerData.intervalId = intervalId;
     }
 };
-//fdfdfdfdfdfd

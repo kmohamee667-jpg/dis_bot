@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS timer (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL,
     channel_id TEXT NOT NULL UNIQUE,
+    text_channel_id TEXT,
     starter_id TEXT NOT NULL,
     starter_name TEXT,
     
@@ -59,6 +60,9 @@ CREATE TABLE IF NOT EXISTS timer (
     theme_key VARCHAR(50),
     mode VARCHAR(50),
     update_mode VARCHAR(50),
+    
+    top3_prize TEXT,
+    top10_prize TEXT,
     
     start_time BIGINT NOT NULL,
     paused_time BIGINT,

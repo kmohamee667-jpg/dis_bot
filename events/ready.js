@@ -17,6 +17,7 @@ module.exports = {
 
         // 🔄 استعادة التايمرات من قاعدة البيانات
         await timerManager.restoreTimersFromDb();
+        timerManager.initHeartbeat(client);
 
         client.commands = new Collection();
         const commandsPath = path.join(__dirname, '../commands');
