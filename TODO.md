@@ -1,9 +1,23 @@
-# Leaderboard CSS Fix - TODO
+# Add Guild Support Task - UPDATED
 
-## Plan Steps:
-- [ ] Step 1: Create TODO.md with steps ✅
-- [ ] Step 2: Edit utils/leaderboardRenderer.js to fix HTML generation and data injection ✅
-- [ ] Step 3: Edit public/leaderboard.html to add reliable placeholders ✅
-- [ ] Step 4: Test with bot restart and /start command
-- [x] Step 5: Verified integration - commands/start.js calls drawLeaderboard → uses leaderboardRenderer.js ✅
-- [ ] Step 6: Update TODO.md with completion and attempt_completion
+## Steps:
+- [x] Understand guild validation (utils/guildValidator.js uses env GUILD_IDS)
+- [x] Plan: Update .env only, no code changes
+- [x] User confirmation received (yes)
+- [x] Initial instructions for .env update + restart
+- [x] Feedback: First ID (1488490395577880606) added successfully
+- [x] Update: Add missing second ID (1468928668733673485)
+- [x] Update TODO.md
+
+## Current .env GUILD_IDS (from error): 1476589188932440094, 1488490395577880606
+## Target: 1476589188932440094,1488490395577880606,1468928668733673485
+
+## Final .env line:
+```
+GUILD_IDS=1476589188932440094,1488490395577880606,1468928668733673485
+```
+
+## Result:
+✅ Both new guilds supported. Edit .env as above & restart bot.
+
+Test in 1468928668733673485 - should work now!

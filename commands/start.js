@@ -57,7 +57,7 @@ module.exports = {
             return await interaction.reply({ content: '⚠️ هناك تايمر يعمل بالفعل في هذه الغرفة!', flags: [MessageFlags.Ephemeral] });
         }
 
-        await interaction.deferReply();
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
         // 2. Initial Setup
         const timerData = {
@@ -93,7 +93,12 @@ module.exports = {
         timerManager.startTimer(voiceChannel.id, timerData);
 
         // 3. Initial Render
-        await interaction.reply({ content: '⏳ جاري بدء التسايمر...', flags: [MessageFlags.Ephemeral] });
+        await interaction.editReply({ content: '⏳ جاري بدء التايمر...' });
         await timerManager.refreshTimerMessage(interaction.client, voiceChannel.id);
+        
+        await interaction.editReply({ content: '✅ تم بدء التايمر بنجاح! يمكنك متابعة الوقت في الشات الآن.' });
+        
+        // Auto-delete the success message after 5 seconds to keep the user's view clean
+        setTimeout(() => interaction.deleteReply().catch(() => {}), 5000);
     },
 };

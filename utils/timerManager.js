@@ -82,6 +82,17 @@ class TimerManager {
             const everyone = guild.roles.everyone;
             await channel.permissionOverwrites.edit(everyone, { SendMessages: !lock });
             timer.isLocked = lock;
+
+            // Send notification for Challenges when locking
+            if (lock && timer.isChallenge) {
+                const voiceChannel = client.channels.cache.get(timer.channelId);
+                const mentions = voiceChannel?.members.filter(m => !m.user.bot).map(m => `<@${m.id}>`).join(' ') || '';
+                if (mentions) {
+                    await channel.send({ 
+                        content: `⚠️ **تنبيه: تم قفل الشات الآن!**\nسيتم فتح الشات تلقائياً عند انتهاء هذه الدورة.\n${mentions}` 
+                    }).catch(() => {});
+                }
+            }
         } catch (e) {
             console.error('Failed to update channel permissions:', e.message);
         }
@@ -91,8 +102,8 @@ class TimerManager {
         const timer = this.activeTimers.get(channelId);
         if (!timer) return;
 
-        // Perform initial lock if just started
-        if (timer.mode === 'study' && !timer.isLocked && timer.status === 'running' && voiceChannel) {
+        // Perform initial lock if just started (Challenges only)
+        if (timer.isChallenge && timer.mode === 'study' && !timer.isLocked && timer.status === 'running' && voiceChannel) {
             await this.lockChannel(voiceChannel.client, timer, true);
         }
 
@@ -206,7 +217,7 @@ class TimerManager {
                             timer.timeLeft = timer.studyTime;
                             timer.status = 'running';
                             await this.updateCycleInDb(channelId, timer.currentCycle, 'study');
-                            await this.lockChannel(client, timer, true); // Relock for study
+                            if (timer.isChallenge) await this.lockChannel(client, timer, true); // Relock for study (Challenges only)
 
                             if (textChannel) {
                                 const nextCycleEmbed = new EmbedBuilder()
