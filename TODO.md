@@ -1,23 +1,16 @@
-# Add Guild Support Task - UPDATED
+# rm-roles Command Implementation
 
-## Steps:
-- [x] Understand guild validation (utils/guildValidator.js uses env GUILD_IDS)
-- [x] Plan: Update .env only, no code changes
-- [x] User confirmation received (yes)
-- [x] Initial instructions for .env update + restart
-- [x] Feedback: First ID (1488490395577880606) added successfully
-- [x] Update: Add missing second ID (1468928668733673485)
-- [x] Update TODO.md
+**Status: ✅ Completed**
 
-## Current .env GUILD_IDS (from error): 1476589188932440094, 1488490395577880606
-## Target: 1476589188932440094,1488490395577880606,1468928668733673485
+## Steps Completed:
+- [x] 1. Create `events/commands/rm-roles.js` with admin check, confirmation buttons, safe role deletion (below bot position), rate-limiting, logging & success embed.
 
-## Final .env line:
-```
-GUILD_IDS=1476589188932440094,1488490395577880606,1468928668733673485
-```
+## Original Plan Steps:
+1. Create `events/commands/rm-roles.js`.
+2. Test in Discord: Send `!rm-roles` as khal3d0047.
+3. If needed: Add Arabic trigger in messageCreate.js (optional).
+4. Run `node deploy-commands.js` (not needed for prefix command).
+5. Restart bot (`node index.js`).
 
-## Result:
-✅ Both new guilds supported. Edit .env as above & restart bot.
+**Next:** Test the command in your Discord server and restart the bot.
 
-Test in 1468928668733673485 - should work now!
