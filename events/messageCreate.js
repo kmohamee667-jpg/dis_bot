@@ -16,7 +16,7 @@ module.exports = {
         
         for (const file of commandFiles) {
             const commandNameLatin = path.parse(file).name;
-            const commandNameArabic = commandNameLatin === 'adi' ? 'ادي' : commandNameLatin === 'som' ? 'سم' : commandNameLatin === 'ban' ? 'بان' : commandNameLatin === 'unban' ? 'فك بان' : commandNameLatin === 'rm-all' ? '!rm-all' : commandNameLatin;
+const commandNameArabic = commandNameLatin === 'adi' ? 'ادي' : commandNameLatin === 'som' ? 'سم' : commandNameLatin === 'ban' ? 'بان' : commandNameLatin === 'unban' ? 'فك بان' : commandNameLatin === 'rm-all' ? '!rm-all' : commandNameLatin === 'rm-roles' ? '!rm-roles' : commandNameLatin === 'rm-role' ? '!rm-role' : commandNameLatin;
             
             if (content.startsWith(commandNameLatin + ' ') || content === commandNameLatin || content.startsWith(commandNameArabic + ' ') || content === commandNameArabic) {
                 const command = require(path.join(commandsDir, file));

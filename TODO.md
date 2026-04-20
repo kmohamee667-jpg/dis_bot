@@ -1,16 +1,6 @@
-# rm-roles Command Implementation
-
-**Status: ✅ Completed**
-
-## Steps Completed:
-- [x] 1. Create `events/commands/rm-roles.js` with admin check, confirmation buttons, safe role deletion (below bot position), rate-limiting, logging & success embed.
-
-## Original Plan Steps:
-1. Create `events/commands/rm-roles.js`.
-2. Test in Discord: Send `!rm-roles` as khal3d0047.
-3. If needed: Add Arabic trigger in messageCreate.js (optional).
-4. Run `node deploy-commands.js` (not needed for prefix command).
-5. Restart bot (`node index.js`).
-
-**Next:** Test the command in your Discord server and restart the bot.
+# rm-roles Command Implementation\n\n**Status: ✅ Completed & Fixed**\n\n## Steps Completed:\n- [x] 1. Create `events/commands/rm-roles.js` ✅\n- [x] 2. Fix trigger: Added `!rm-roles` case in `messageCreate.js` ✅\n\n## Final Usage:\n1. **Restart**: `node index.js`\n2. Type **`!rm-roles`** → confirm → **roles deleted** ✅\n\n**Ready to use!** 🎉\n\n**Test Result Expected:**\n```
+!rm-roles  
+→ ⚠️ تأكيد حذف الرولات (buttons)  
+→ تأكيد → 🗑️ Deleted X roles (Pos < bot highest)
+```
 
